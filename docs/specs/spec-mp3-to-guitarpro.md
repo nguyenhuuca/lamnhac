@@ -43,7 +43,7 @@ Không có database. Các model nội bộ trong `models.py`, đều là `@datac
 | `TabNote` | `pitch: int`, `string: int` (1–6), `fret: int` (0–24) | `tuning.strings[string-1] + fret == pitch` |
 | `TabSlot` | `start: int`, `length: int`, `notes: tuple[TabNote, ...]` | Mỗi dây xuất hiện tối đa một lần |
 | `TabScore` | `rhythm: RhythmInfo`, `tuning: Tuning`, `slots: tuple[TabSlot, ...]`, `title: str` | – |
-| `ConvertOptions` | `input: Path`, `out_dir: Path`, `formats: frozenset[Literal["gp5", "musicxml"]]`, `tempo: float \| None`, `tuning: Tuning`, `time_signature: TimeSignature`, `force: bool` | Đã được `cli.py` kiểm tra |
+| `ConvertOptions` | `input: Path`, `out_dir: Path`, `formats: frozenset[Literal["gp5", "musicxml"]]`, `tempo: float \| None`, `tuning: Tuning`, `time_signature: TimeSignature`, `max_fret: int` (0–24, mặc định 24), `keep_harmonics: bool`, `force: bool` | Đã được `cli.py` kiểm tra |
 | `ConvertResult` | `outputs: tuple[Path, ...]`, `errors: tuple[str, ...]` (lỗi ghi từng định dạng), `warnings: tuple[str, ...]`, `rhythm: RhythmInfo`, `note_count: int` | – |
 
 ## Interfaces
@@ -52,7 +52,7 @@ Không có database. Các model nội bộ trong `models.py`, đều là `@datac
 
 ```
 lamnhac convert <input> [-o OUT_DIR] [--format gp5,musicxml] [--tempo BPM]
-                [--tuning "E A D G B E"] [--time 4/4] [--force] [-v]
+                [--tuning "E A D G B E"] [--time 4/4] [--max-fret N] [--keep-harmonics] [--force] [-v]
 ```
 
 | Đối số | Mặc định | Kiểm tra |
@@ -63,6 +63,8 @@ lamnhac convert <input> [-o OUT_DIR] [--format gp5,musicxml] [--tempo BPM]
 | `--tempo` | tự đoán | Số thực 30–300, **BPM của nốt đen** (với 6/8 đi chậm 60 nốt đen chấm/phút thì nhập 90) |
 | `--tuning` | `E A D G B E` | 6 tên nốt viết **từ dây trầm đến dây cao**, mỗi tên khớp `^[A-G][#b]?$`. CLI đảo thứ tự khi tạo `Tuning`. Quãng tám suy ra theo B11 |
 | `--time` | `4/4` | `N/D`, ràng buộc như `TimeSignature` |
+| `--max-fret` | 24 | Số nguyên 0–24. Giới hạn phím cao nhất được dùng khi gán tab (B12) |
+| `--keep-harmonics` | tắt | Tắt bộ lọc hoạ âm (B4a) |
 | `--force` | tắt | Cho phép ghi đè file đầu ra đã có |
 | `-v/--verbose` | tắt | Log mức DEBUG ra stderr |
 
@@ -82,11 +84,11 @@ stdout chỉ in đường dẫn các file đã tạo, mỗi file một dòng, đ
 | Hàm | Input | Output | Lỗi |
 |-----|-------|--------|-----|
 | `audio.load(path)` | `Path` | `AudioClip` | `InputError`, `ProcessingError` |
-| `transcribe.transcribe(clip, tuning)` | `AudioClip`, `Tuning` | `list[NoteEvent]` | `ProcessingError` |
+| `transcribe.transcribe(clip, tuning, filter_harmonics=True)` | `AudioClip`, `Tuning`, `bool` | `tuple[list[NoteEvent], list[str]]` (kèm cảnh báo) | `ProcessingError` |
 | `rhythm.analyze(clip, notes, tempo, time_sig)` | `AudioClip`, `list[NoteEvent]`, `float \| None`, `TimeSignature` | `RhythmInfo` | `ProcessingError` |
 | `rhythm.quantize(notes, rhythm)` | `list[NoteEvent]`, `RhythmInfo` | `Score` | – |
 | `durations.split(start, length, bar_slots)` | `int`, `int`, `int` | `list[tuple[int, bool]]` (trường độ tính bằng slot, có tie với phần sau không) | – |
-| `tab.assign(score, tuning)` | `Score`, `Tuning` | `tuple[TabScore, list[str]]` (kèm cảnh báo) | – |
+| `tab.assign(score, tuning, max_fret=24)` | `Score`, `Tuning`, `int` | `tuple[TabScore, list[str]]` (kèm cảnh báo) | – |
 | `export_gp5.write(tab, path)` | `TabScore`, `Path` (đích cuối) | `None` | `OutputError` |
 | `export_musicxml.write(tab, path)` | `TabScore`, `Path` (đích cuối) | `None` | `OutputError` |
 | `pipeline.convert(opts, progress)` | `ConvertOptions`, `Callable[[str], None]` | `ConvertResult` | các lớp con của `LamnhacError` |
@@ -104,6 +106,7 @@ stdout chỉ in đường dẫn các file đã tạo, mỗi file một dòng, đ
 
   Hàm trả về `(model_output, midi_data, note_events)`. Mỗi `note_event` có dạng `(start_s, end_s, pitch, amplitude, pitch_bends)` và được đổi sang `NoteEvent(velocity=amplitude)`, sắp theo `onset_s`. Các ngưỡng là hằng số trong `transcribe.py` để chỉnh sau khi đo G1.
 - **B4.** Không có nốt nào sau B3 thì sinh `ProcessingError("không nhận được nốt nào — file có phải guitar không?")`.
+- **B4a. Lọc hoạ âm** (R13, bật mặc định). Bỏ nốt `n` nếu tồn tại nốt `m` sao cho: `n.pitch − m.pitch ∈ {12, 19, 24, 28, 31, 36}` (hoạ âm bậc 2, 3, 4, 5, 6, 8); `|n.onset − m.onset| ≤ 80 ms`; hai nốt vang chồng nhau; và `n.velocity ≤ 0.8 × m.velocity`. Ngưỡng 0.8 chọn theo đo đạc 2026-11-13: trên riff mẫu precision 0.71 → 0.92, recall giữ 1.00; trên testgod.mp3 bỏ 53/297 nốt. Lọc chạy trong `transcribe` sau khi đổi sang `NoteEvent`, trước B4 (nếu lọc xong không còn nốt thì vẫn báo B4). Số nốt bị bỏ được thêm vào cảnh báo: `bỏ N nốt hoạ âm`. `--keep-harmonics` tắt bước này.
 
 **Nhịp (R4, R12)**
 
@@ -118,7 +121,7 @@ Tempo luôn tính theo nốt đen, và một slot luôn là một nốt móc ké
 
 **Gán tab (R5, R11)**
 - **B11. Tuning.** Tên nốt trong `--tuning` được đổi sang MIDI bằng cách chọn quãng tám gần nhất với dây tương ứng của E chuẩn. Nếu hai quãng tám cách đều thì chọn quãng thấp hơn. Ví dụ `D A D G B E` cho dây 6 = D2 (38).
-- **B12. Cách bấm hợp lệ.** Một nốt đặt được trên dây `s` khi `0 ≤ pitch − tuning[s] ≤ 24`. Nốt không đặt được trên dây nào thì bị bỏ, kèm cảnh báo `bỏ N nốt ngoài tầm cây đàn`. Mỗi slot liệt kê mọi cách gán mỗi nốt một dây khác nhau, tối đa 6! = 720 tổ hợp. Nếu slot có hơn 6 nốt, hoặc không có cách gán nào (ví dụ 40 và 41 chỉ đặt được trên dây 6), thì bỏ nốt có velocity thấp nhất và thử lại cho đến khi có cách gán, kèm cảnh báo. Ưu tiên các cách bấm có độ trải phím (các phím ≠ 0) ≤ 4. Nếu không có cách nào như vậy thì nhận cách có độ trải nhỏ nhất và cảnh báo.
+- **B12. Cách bấm hợp lệ.** Một nốt đặt được trên dây `s` khi `0 ≤ pitch − tuning[s] ≤ max_fret` (mặc định 24, đặt bằng `--max-fret`, R14). Nốt không đặt được trên dây nào thì bị bỏ, kèm cảnh báo `bỏ N nốt ngoài tầm cây đàn`. Mỗi slot liệt kê mọi cách gán mỗi nốt một dây khác nhau, tối đa 6! = 720 tổ hợp. Nếu slot có hơn 6 nốt, hoặc không có cách gán nào (ví dụ 40 và 41 chỉ đặt được trên dây 6), thì bỏ nốt có velocity thấp nhất và thử lại cho đến khi có cách gán, kèm cảnh báo. Ưu tiên các cách bấm có độ trải phím (các phím ≠ 0) ≤ 4. Nếu không có cách nào như vậy thì nhận cách có độ trải nhỏ nhất và cảnh báo.
 - **B13. Beam search.** Trạng thái là một cách bấm của một slot có nốt. Slot dấu lặng bị bỏ qua.
   - `tâm(state)` = trung bình các phím ≠ 0, hoặc `None` nếu toàn dây buông. `tâm` chỉ phụ thuộc trạng thái, nên DP hợp lệ.
   - Chi phí trạng thái = `span + 0.3 × Σ max(0, fret − 12)`.
@@ -218,3 +221,5 @@ Muốn quay lại bản cũ thì checkout commit trước. Công cụ không có
 | R10 | B21 | §1 |
 | R11 | B3, B11, B12, B18 | – |
 | R12 | Data Model `bar_slots`, B8, B16 | – |
+| R13 | B4a, `--keep-harmonics` | §1 |
+| R14 | B12, `--max-fret` | §1 |

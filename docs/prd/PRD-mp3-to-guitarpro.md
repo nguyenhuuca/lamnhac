@@ -47,6 +47,8 @@ Bằng chứng: nhu cầu của chính owner (người dùng đầu tiên). Repo
 | R10 | Báo tiến độ theo từng bước (decode, transcribe, quantize, tab, export) | should | Given bài 3 phút, when chạy, then mỗi bước in một dòng trạng thái và tổng thời gian ≤ 3 phút (G3) |
 | R11 | Hỗ trợ tuning khác chuẩn (Drop D, Eb chuẩn…) qua `--tuning` | could | Given `--tuning "D A D G B E"`, when convert, then tab gán theo tuning đó và file đầu ra ghi đúng tuning |
 | R12 | Cho phép đặt time signature (`--time 3/4`) | could | Given `--time 3/4`, when convert, then ô nhịp chia theo 3/4 |
+| R13 | Lọc hoạ âm: bỏ nốt giả do hoạ âm của một nốt trầm hơn | should | Given bản thu có dây trầm buông ngân, when convert, then hoạ âm (+12, +19, +24, +28, +31, +36 nửa cung, cùng lúc, nhỏ hơn rõ rệt) không thành nốt riêng, còn quãng tám thật trong power chord vẫn giữ; tắt được bằng `--keep-harmonics` |
+| R14 | Giới hạn vùng phím `--max-fret N` | should | Given `--max-fret 5`, when convert, then mọi nốt trong tab có phím ≤ 5, nốt không bấm được trong vùng đó bị bỏ kèm cảnh báo |
 
 ## Constraints and Risks
 
@@ -69,3 +71,7 @@ Bằng chứng: nhu cầu của chính owner (người dùng đầu tiên). Repo
 - Có sẵn vài bản thu kèm tab đúng để làm bộ test cho G1 không, hay dùng dataset công khai (GuitarSet)? (owner)
 - Ngoài MP3 có cần nhận WAV/FLAC không? Gần như không tốn thêm công. (owner)
 - Tech stack (ngôn ngữ, model transcription, thư viện xuất file) sẽ chốt qua `/welcome` và một ADR sau khi PRD được duyệt. (Claude đề xuất, owner quyết)
+
+## Changelog
+
+- 2026-11-13: R13, R14 thêm sau khi chạy thử bản thu thật (testgod.mp3) thấy dư hoạ âm và người chơi chỉ dùng vài ngăn đầu.
