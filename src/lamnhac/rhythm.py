@@ -114,7 +114,13 @@ def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots
         scores[o] = total
     best = max(scores.values())
     tied = [o for o, sc in scores.items() if sc >= best - _EPS]
-    return min(tied, key=lambda o: (abs(o - first_p), o))
+
+    def phase_distance(o: int) -> float:
+        # Distance from the first onset to the nearest o + k*bar_slots, not to o itself.
+        d = (first_p - o) % bar_slots
+        return min(d, bar_slots - d)
+
+    return min(tied, key=lambda o: (phase_distance(o), o))
 
 
 def analyze(

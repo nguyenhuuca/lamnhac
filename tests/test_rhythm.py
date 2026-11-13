@@ -374,3 +374,12 @@ def test_detected_fast_tempo_notes_land_four_slots_apart_after_fold(
     assert info.tempo_bpm == pytest.approx(120.0)
     starts = [s.start for s in quantize(notes, info).slots if s.notes]
     assert [b - a for a, b in pairwise(starts)] == [4] * 5
+
+
+def test_downbeat_tie_break_uses_bar_phase() -> None:
+    # Equal-velocity notes on every beat -> all offsets tie. The first note sits at slot 36
+    # (bar 2, beat 2 in 4/4); the tie must go to offset 4 (same phase), not offset 12
+    # (closest to 36 in absolute terms among 0..12).
+    beats = [0.5 * i for i in range(20)]
+    notes = [NoteEvent(0.5 * b, 0.5 * b + 0.4, 60, 0.8) for b in range(9, 17)]
+    assert _pick_downbeat(beats, notes, 16) == 4
