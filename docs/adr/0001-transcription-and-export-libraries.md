@@ -39,7 +39,27 @@ Option A. It is the only combination that is installable on Windows, offline, fr
 - TensorFlow < 2.15.1 is old and has published advisories. The install spike runs `pip-audit` on the resolved lock file and records the result here. The risk is lower than usual because the tool only loads the bundled model and the user's own local audio, but any advisory that applies to that path blocks the choice.
 - The spike also checks that PyGuitarPro handles titles with non-ASCII characters (spec B17 ASCII-folds them anyway) and whether music21 writes `<staff-tuning>` and a TAB clef (spec B18).
 
+## Spike Result (2026-11-13)
+
+See `docs/reports/spike-2026-11-13-install.md`. Option A works on Windows with Python 3.11 after three packaging fixes in `pyproject.toml`:
+- `tensorflow-io-gcs-filesystem<=0.31.0` on win32: 0.37.x has no Windows wheel.
+- A direct dependency `tensorflow-intel==2.15.0` on win32. Without it the lock resolves `tensorflow` alone and `import basic_pitch` fails.
+- `setuptools<81`: resampy 0.4.2 imports `pkg_resources`.
+
+What the spike found:
+- `soundfile` (libsndfile 1.2.2) decodes MP3 without ffmpeg.
+- PyGuitarPro cannot write non-ASCII titles in cp1252, which confirms the spec's B17 ASCII-folding.
+- music21 does not write `<staff-tuning>`, so B18's ElementTree post-process is required.
+
+`pip-audit` reports advisories in three packages, and none can be upgraded within TF 2.15:
+- **keras 2.15.0:** pinned by TF 2.15.
+- **protobuf 4.25.9:** fixed in 5.29.6.
+- **setuptools 80.10.2:** comes from our own constraint.
+
+These advisories have not been read one by one. The working assessment is that the keras and protobuf issues need untrusted model or protobuf input. We load only the model bundled in the package and the user's own audio, so they are judged not reachable. The setuptools issues apply only at install time. **Accepted as a known risk pending the owner's review.** If any of them becomes reachable, revisit this ADR: basic-pitch also ships ONNX and TFLite models, which would remove TensorFlow.
+
 ## Changelog
 
 - 2026-11-13: created.
 - 2026-11-13: added pip-audit and spike checks after spec review.
+- 2026-11-13: recorded install spike result and dependency advisories.
