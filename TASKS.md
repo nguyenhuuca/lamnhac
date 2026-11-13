@@ -13,4 +13,4 @@
 - [x] T9 `pipeline` + `cli` (MusicXML only) (d1d0655)
 - [x] T10 `export_gp5` + pipeline wiring (c185dc5)
 - [ ] T11 Eval G1/G3 + report
-- [x] T12 Harmonic filter (B4a) + `--max-fret` (B12)
+- [x] T12 Harmonic filter (B4a) + `--max-fret` (B12) (70ed456)
