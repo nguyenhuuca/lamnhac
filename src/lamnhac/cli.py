@@ -27,6 +27,12 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--tempo", type=float, help="quarter-note BPM, 30-300 (default: detect)")
     c.add_argument("--tuning", default="E A D G B E", help="6 note names, low to high")
     c.add_argument("--time", default="4/4", help="time signature N/D")
+    c.add_argument("--max-fret", type=int, default=24, help="highest fret used, 0-24")
+    c.add_argument(
+        "--filter-harmonics",
+        action="store_true",
+        help="drop overtone notes (good for single-note lines; may drop real octaves in chords)",
+    )
     c.add_argument("--force", action="store_true", help="overwrite existing outputs")
     c.add_argument("-v", "--verbose", action="store_true", help="DEBUG logging, tracebacks")
     return parser
@@ -51,6 +57,8 @@ def _options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Conve
     try:
         if args.tempo is not None and not 30 <= args.tempo <= 300:  # also rejects NaN
             raise ValueError("--tempo phải nằm trong khoảng 30..300")
+        if not 0 <= args.max_fret <= 24:
+            raise ValueError("--max-fret phải nằm trong khoảng 0..24")
         formats = _parse_formats(args.format)
         time_sig = _parse_time(args.time)
         tuning = parse_tuning(args.tuning)
@@ -65,6 +73,8 @@ def _options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Conve
         tuning=tuning,
         time_signature=time_sig,
         force=args.force,
+        max_fret=args.max_fret,
+        filter_harmonics=args.filter_harmonics,
     )
 
 

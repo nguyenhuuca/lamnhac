@@ -4,7 +4,7 @@ Run from the repository root:
 
     uv run python tests/fixtures/make_fixtures.py
 
-Writes scale_c.mp3/.json, riff_97bpm.mp3/.json and stereo_short.mp3 next to this file.
+Writes scale_c, riff_97bpm and power_chord (.mp3 + .json) and stereo_short.mp3 next to this file.
 """
 
 import json
@@ -127,11 +127,19 @@ def make_stereo(rng: np.random.Generator) -> None:
     sf.write(str(OUT / "stereo_short.mp3"), np.stack([left, right], axis=1), SR, format="MP3")
 
 
+def make_power_chord(rng: np.random.Generator) -> None:
+    """E2+B2+E3 struck together at equal amplitude, 4 times: E3 is a real note, not an overtone."""
+    notes: list[Note] = [(0.8 * i, 0.8 * i + 0.7, p, 1.0) for i in range(4) for p in (40, 47, 52)]
+    write_mp3(OUT / "power_chord.mp3", render(notes, 4.0, rng))
+    dump(OUT / "power_chord.json", {"notes": notes_json(notes)})
+
+
 def main() -> None:
     rng = np.random.default_rng(SEED)
     make_scale(rng)
     make_riff(rng)
     make_stereo(rng)
+    make_power_chord(rng)  # last: keeps the rng stream of the fixtures above unchanged
 
 
 if __name__ == "__main__":

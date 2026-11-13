@@ -47,6 +47,16 @@ lamnhac chỉnh basic-pitch như sau:
 
 Giới hạn dải tần theo tuning giúp loại bớt hoạ âm cao và tiếng ồn trầm vốn không thể là nốt guitar. Model được nạp **một lần cho mỗi tiến trình**: lần đầu khoảng 11 giây do nạp TensorFlow, các lần sau dưới 1 giây.
 
+### 2.1 Lọc hoạ âm (tùy chọn)
+
+Khi gảy một dây, dây rung ở tần số gốc (nốt thật) **và** ở các tần số gấp 2, 3, 4, 5, 6, 8 lần, gọi là hoạ âm. Các hoạ âm này cao hơn nốt gốc 12, 19, 24, 28, 31, 36 nửa cung. Tai nghe tất cả thành một nốt, nhưng model đôi khi báo hoạ âm thành nốt riêng.
+
+`--filter-harmonics` bỏ nốt `n` khi có nốt `m` trầm hơn đúng một trong các khoảng trên, bắt đầu cùng lúc (±80 ms), vang chồng lên nhau, và `n` nhỏ hơn hoặc bằng 80% `m`. Trên riff mẫu, cách này nâng tỉ lệ nốt đúng từ 0.71 lên 0.92 mà không mất nốt thật nào.
+
+**Vì sao mặc định tắt:** trong hợp âm có quãng tám *thật* (power chord E2+B2+E3, hợp âm E mở), basic-pitch báo nốt quãng tám chỉ to khoảng 0.5 lần nốt trầm, giống hệt hoạ âm. Bộ lọc vì vậy bỏ nhầm E3 ở 3/4 lần gảy. Chỉ dựa vào độ to thì không tách được hai trường hợp, nên lọc chỉ bật khi người dùng yêu cầu.
+
+**Cách thay thế an toàn:** `--max-fret N`. Hoạ âm thường nằm cao trên cần đàn (ví dụ E5 = phím 12 dây 1), nên khi biết người chơi chỉ ở vài ngăn đầu, giới hạn phím sẽ loại phần lớn hoạ âm mà không bao giờ bỏ một nốt bấm được.
+
 ## 3. Tìm phách và tempo (`rhythm.analyze`, B5–B8)
 
 ### 3.1 Theo dõi phách (beat tracking)
@@ -107,7 +117,7 @@ Một cao độ có thể bấm ở nhiều chỗ: E4 (MIDI 64) là dây 1 buôn
 
 ### 5.1 Các cách bấm hợp lệ cho một slot
 
-- Nốt `p` đặt được trên dây `s` khi `0 ≤ p − tuning[s] ≤ 24`.
+- Nốt `p` đặt được trên dây `s` khi `0 ≤ p − tuning[s] ≤ max_fret`. Mặc định là 24, đặt bằng `--max-fret`.
 - Mỗi nốt trong hợp âm phải nằm trên **một dây khác nhau**. lamnhac liệt kê mọi cách gán, tối đa 6! = 720 cách.
 - Nếu không có cách nào hợp lệ (ví dụ hai nốt E2 và F2 chỉ đặt được trên dây 6), bỏ nốt có velocity thấp nhất rồi thử lại, kèm cảnh báo.
 - Ưu tiên các thế có **độ trải** ≤ 4 phím (khoảng cách giữa phím bấm cao nhất và thấp nhất, không tính dây buông).

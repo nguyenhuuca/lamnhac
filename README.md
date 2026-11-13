@@ -68,6 +68,8 @@ Lần chạy đầu mất thêm khoảng 10 giây để nạp model TensorFlow. 
 | `--tempo BPM` | tự đoán | Tempo tính theo **nốt đen**, từ 30 đến 300. Dùng khi tempo đoán sai |
 | `--tuning "E A D G B E"` | E chuẩn | 6 tên nốt viết **từ dây trầm đến dây cao**, ví dụ Drop D là `"D A D G B E"` |
 | `--time N/D` | `4/4` | Số chỉ nhịp, ví dụ `3/4`, `6/8`, `2/2` |
+| `--max-fret N` | 24 | Chỉ dùng phím 0..N khi gán tab. Nốt không bấm được trong vùng đó bị bỏ, kèm cảnh báo. Hữu ích khi biết người chơi chỉ ở vài ngăn đầu, và cũng loại được phần lớn hoạ âm |
+| `--filter-harmonics` | tắt | Bỏ các nốt giả do hoạ âm (cao hơn 1–3 quãng tám, nhỏ hơn rõ rệt). Tốt cho câu lead đánh từng nốt, nhưng **có thể bỏ nhầm quãng tám thật** trong hợp âm |
 | `--force` | tắt | Cho phép ghi đè file đã có. Nếu không bật, lệnh sẽ dừng **trước khi** xử lý |
 | `-v, --verbose` | tắt | In log chi tiết và stack trace khi có lỗi |
 
@@ -79,6 +81,12 @@ uv run lamnhac convert bai.mp3 --tuning "D A D G B E" --time 3/4 -o D:\tab
 
 # Tempo đoán ra 192 nhưng thực tế là 96, nên nhập tay
 uv run lamnhac convert bai.mp3 --tempo 96 --force
+
+# Người chơi chỉ ở 5 ngăn đầu: giới hạn phím, loại bớt hoạ âm
+uv run lamnhac convert bai.mp3 --max-fret 5
+
+# Câu lead đánh từng nốt, có nhiều nốt giả do hoạ âm
+uv run lamnhac convert bai.mp3 --filter-harmonics
 
 # Chỉ cần file .gp5
 uv run lamnhac convert bai.mp3 --format gp5
@@ -111,7 +119,7 @@ Hữu ích khi gọi tool từ script khác. stdout chỉ in đường dẫn cá
 - Lưới nhỏ nhất là **nốt móc kép (1/16)**. Chưa có chùm ba, và cả bài dùng một tempo duy nhất.
 - Không nhận kỹ thuật bend, slide, hammer-on, pull-off hay vibrato.
 - Phách mạnh được đoán theo nốt được nhấn mạnh nhất. Nếu ô nhịp bị lệch, hãy sửa trong Guitar Pro.
-- Thường có vài nốt thừa do hoạ âm, nhất là với tiếng distortion.
+- Thường có nốt thừa do **hoạ âm** (tần số gấp 2, 3, 4… lần của nốt thật, sinh ra từ chính dây vừa gảy). Dùng `--max-fret` hoặc `--filter-harmonics` để giảm, xem [docs/algorithms.md](docs/algorithms.md#21-lọc-hoạ-âm-tuỳ-chọn).
 - File đầu vào giới hạn 50 MB và 10 phút.
 
 ## Phát triển

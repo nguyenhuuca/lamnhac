@@ -55,7 +55,9 @@ def convert(opts: ConvertOptions, progress: Callable[[str], None]) -> ConvertRes
 
     t = step(2, "nhận nốt")
     with redirect_stdout(sys.stderr):  # basic-pitch print()s to stdout; stdout is for paths only
-        notes = transcribe.transcribe(clip, opts.tuning)
+        notes, warnings = transcribe.transcribe(
+            clip, opts.tuning, filter_harmonics=opts.filter_harmonics
+        )
     done("transcribe", t)
 
     t = step(3, "phân tích nhịp")
@@ -69,7 +71,10 @@ def convert(opts: ConvertOptions, progress: Callable[[str], None]) -> ConvertRes
     done("quantize", t)
 
     t = step(5, "gán tab")
-    tab_score, warnings = tab.assign(score, opts.tuning, title=opts.input.stem)
+    tab_score, tab_warnings = tab.assign(
+        score, opts.tuning, title=opts.input.stem, max_fret=opts.max_fret
+    )
+    warnings += tab_warnings
     done("assign", t)
 
     t = step(6, "xuất file")

@@ -43,7 +43,7 @@ Không có database. Các model nội bộ trong `models.py`, đều là `@datac
 | `TabNote` | `pitch: int`, `string: int` (1–6), `fret: int` (0–24) | `tuning.strings[string-1] + fret == pitch` |
 | `TabSlot` | `start: int`, `length: int`, `notes: tuple[TabNote, ...]` | Mỗi dây xuất hiện tối đa một lần |
 | `TabScore` | `rhythm: RhythmInfo`, `tuning: Tuning`, `slots: tuple[TabSlot, ...]`, `title: str` | – |
-| `ConvertOptions` | `input: Path`, `out_dir: Path`, `formats: frozenset[Literal["gp5", "musicxml"]]`, `tempo: float \| None`, `tuning: Tuning`, `time_signature: TimeSignature`, `max_fret: int` (0–24, mặc định 24), `keep_harmonics: bool`, `force: bool` | Đã được `cli.py` kiểm tra |
+| `ConvertOptions` | `input: Path`, `out_dir: Path`, `formats: frozenset[Literal["gp5", "musicxml"]]`, `tempo: float \| None`, `tuning: Tuning`, `time_signature: TimeSignature`, `max_fret: int` (0–24, mặc định 24), `filter_harmonics: bool` (mặc định `False`), `force: bool` | Đã được `cli.py` kiểm tra |
 | `ConvertResult` | `outputs: tuple[Path, ...]`, `errors: tuple[str, ...]` (lỗi ghi từng định dạng), `warnings: tuple[str, ...]`, `rhythm: RhythmInfo`, `note_count: int` | – |
 
 ## Interfaces
@@ -52,7 +52,7 @@ Không có database. Các model nội bộ trong `models.py`, đều là `@datac
 
 ```
 lamnhac convert <input> [-o OUT_DIR] [--format gp5,musicxml] [--tempo BPM]
-                [--tuning "E A D G B E"] [--time 4/4] [--max-fret N] [--keep-harmonics] [--force] [-v]
+                [--tuning "E A D G B E"] [--time 4/4] [--max-fret N] [--filter-harmonics] [--force] [-v]
 ```
 
 | Đối số | Mặc định | Kiểm tra |
@@ -64,7 +64,7 @@ lamnhac convert <input> [-o OUT_DIR] [--format gp5,musicxml] [--tempo BPM]
 | `--tuning` | `E A D G B E` | 6 tên nốt viết **từ dây trầm đến dây cao**, mỗi tên khớp `^[A-G][#b]?$`. CLI đảo thứ tự khi tạo `Tuning`. Quãng tám suy ra theo B11 |
 | `--time` | `4/4` | `N/D`, ràng buộc như `TimeSignature` |
 | `--max-fret` | 24 | Số nguyên 0–24. Giới hạn phím cao nhất được dùng khi gán tab (B12) |
-| `--keep-harmonics` | tắt | Tắt bộ lọc hoạ âm (B4a) |
+| `--filter-harmonics` | tắt | Bật bộ lọc hoạ âm (B4a) |
 | `--force` | tắt | Cho phép ghi đè file đầu ra đã có |
 | `-v/--verbose` | tắt | Log mức DEBUG ra stderr |
 
@@ -84,7 +84,7 @@ stdout chỉ in đường dẫn các file đã tạo, mỗi file một dòng, đ
 | Hàm | Input | Output | Lỗi |
 |-----|-------|--------|-----|
 | `audio.load(path)` | `Path` | `AudioClip` | `InputError`, `ProcessingError` |
-| `transcribe.transcribe(clip, tuning, filter_harmonics=True)` | `AudioClip`, `Tuning`, `bool` | `tuple[list[NoteEvent], list[str]]` (kèm cảnh báo) | `ProcessingError` |
+| `transcribe.transcribe(clip, tuning, filter_harmonics=False)` | `AudioClip`, `Tuning`, `bool` | `tuple[list[NoteEvent], list[str]]` (kèm cảnh báo) | `ProcessingError` |
 | `rhythm.analyze(clip, notes, tempo, time_sig)` | `AudioClip`, `list[NoteEvent]`, `float \| None`, `TimeSignature` | `RhythmInfo` | `ProcessingError` |
 | `rhythm.quantize(notes, rhythm)` | `list[NoteEvent]`, `RhythmInfo` | `Score` | – |
 | `durations.split(start, length, bar_slots)` | `int`, `int`, `int` | `list[tuple[int, bool]]` (trường độ tính bằng slot, có tie với phần sau không) | – |
@@ -106,7 +106,7 @@ stdout chỉ in đường dẫn các file đã tạo, mỗi file một dòng, đ
 
   Hàm trả về `(model_output, midi_data, note_events)`. Mỗi `note_event` có dạng `(start_s, end_s, pitch, amplitude, pitch_bends)` và được đổi sang `NoteEvent(velocity=amplitude)`, sắp theo `onset_s`. Các ngưỡng là hằng số trong `transcribe.py` để chỉnh sau khi đo G1.
 - **B4.** Không có nốt nào sau B3 thì sinh `ProcessingError("không nhận được nốt nào — file có phải guitar không?")`.
-- **B4a. Lọc hoạ âm** (R13, bật mặc định). Bỏ nốt `n` nếu tồn tại nốt `m` sao cho: `n.pitch − m.pitch ∈ {12, 19, 24, 28, 31, 36}` (hoạ âm bậc 2, 3, 4, 5, 6, 8); `|n.onset − m.onset| ≤ 80 ms`; hai nốt vang chồng nhau; và `n.velocity ≤ 0.8 × m.velocity`. Ngưỡng 0.8 chọn theo đo đạc 2026-11-13: trên riff mẫu precision 0.71 → 0.92, recall giữ 1.00; trên testgod.mp3 bỏ 53/297 nốt. Lọc chạy trong `transcribe` sau khi đổi sang `NoteEvent`, trước B4 (nếu lọc xong không còn nốt thì vẫn báo B4). Số nốt bị bỏ được thêm vào cảnh báo: `bỏ N nốt hoạ âm`. `--keep-harmonics` tắt bước này.
+- **B4a. Lọc hoạ âm** (R13, **tắt mặc định**, bật bằng `--filter-harmonics`). Bỏ nốt `n` nếu tồn tại nốt `m` sao cho: `n.pitch − m.pitch ∈ {12, 19, 24, 28, 31, 36}` (hoạ âm bậc 2, 3, 4, 5, 6, 8); `|n.onset − m.onset| ≤ 80 ms`; hai nốt vang chồng nhau; và `n.velocity ≤ 0.8 × m.velocity`. Ngưỡng 0.8 chọn theo đo đạc 2026-11-13: trên riff mẫu precision 0.71 → 0.92, recall giữ 1.00; trên testgod.mp3 bỏ 53/297 nốt. Lọc chạy trong `transcribe` sau khi đổi sang `NoteEvent`, trước B4 (nếu lọc xong không còn nốt thì vẫn báo B4). Số nốt bị bỏ được thêm vào cảnh báo: `bỏ N nốt hoạ âm`. Lọc tắt mặc định vì basic-pitch báo quãng tám *thật* trong hợp âm (power chord E2+B2+E3) nhỏ chỉ ~0.5× nốt trầm, nên ngưỡng 0.8 bỏ nhầm nó ở 3/4 lần gảy (test `xfail` ghi nhận). Hợp với câu lead đánh từng nốt. Với hợp âm, dùng `--max-fret` thay thế.
 
 **Nhịp (R4, R12)**
 
@@ -221,5 +221,5 @@ Muốn quay lại bản cũ thì checkout commit trước. Công cụ không có
 | R10 | B21 | §1 |
 | R11 | B3, B11, B12, B18 | – |
 | R12 | Data Model `bar_slots`, B8, B16 | – |
-| R13 | B4a, `--keep-harmonics` | §1 |
+| R13 | B4a, `--filter-harmonics` | §1 |
 | R14 | B12, `--max-fret` | §1 |

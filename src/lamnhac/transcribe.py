@@ -1,6 +1,7 @@
 """Audio to note events with basic-pitch (spec B3, B4)."""
 
 import os
+from bisect import bisect_left, bisect_right
 from collections.abc import Sequence
 from typing import Any
 
@@ -12,6 +13,9 @@ FRAME_THRESHOLD = 0.3
 MIN_NOTE_LENGTH_MS = 58.0
 LOW_MARGIN_SEMITONES = 1
 HIGH_MARGIN_SEMITONES = 25  # highest string + 24 frets + 1 semitone of slack
+HARMONIC_INTERVALS = frozenset({12, 19, 24, 28, 31, 36})
+HARMONIC_ONSET_WINDOW_S = 0.08
+HARMONIC_VELOCITY_RATIO = 0.8
 _NO_NOTES_MSG = "không nhận được nốt nào — file có phải guitar không?"
 
 _model: Any = None  # loaded basic_pitch Model, cached per process
@@ -51,7 +55,37 @@ def _predict(clip: AudioClip, low_hz: float, high_hz: float) -> Sequence[Sequenc
     return list(events)
 
 
-def transcribe(clip: AudioClip, tuning: Tuning) -> list[NoteEvent]:
+def filter_harmonics(notes: Sequence[NoteEvent]) -> tuple[list[NoteEvent], int]:
+    """Drop overtones of a louder, simultaneous lower note (spec B4a).
+
+    Every drop is decided against the ORIGINAL list, not the already filtered one, so the
+    result does not depend on processing order (a quiet note can still be the evidence that
+    removes an even quieter overtone above it).
+    """
+    ordered = sorted(notes, key=lambda n: (n.onset_s, n.pitch))
+    onsets = [n.onset_s for n in ordered]  # sorted: only the 80 ms window is compared
+    kept: list[NoteEvent] = []
+    for n in ordered:
+        lo = bisect_left(onsets, n.onset_s - HARMONIC_ONSET_WINDOW_S)
+        hi = bisect_right(onsets, n.onset_s + HARMONIC_ONSET_WINDOW_S)
+        is_overtone = any(
+            n.pitch - m.pitch in HARMONIC_INTERVALS
+            and m.onset_s < n.offset_s
+            and n.onset_s < m.offset_s
+            and n.velocity <= HARMONIC_VELOCITY_RATIO * m.velocity
+            for m in ordered[lo:hi]
+        )
+        if not is_overtone:
+            kept.append(n)
+    return kept, len(ordered) - len(kept)
+
+
+_apply_filter = filter_harmonics  # transcribe()'s parameter of the same name shadows it
+
+
+def transcribe(
+    clip: AudioClip, tuning: Tuning, filter_harmonics: bool = False
+) -> tuple[list[NoteEvent], list[str]]:
     low, high = frequency_range(tuning)
     try:
         raw = _predict(clip, low, high)
@@ -67,7 +101,12 @@ def transcribe(clip: AudioClip, tuning: Tuning) -> list[NoteEvent]:
         ]
     except Exception as exc:
         raise ProcessingError("lỗi khi nhận dạng nốt nhạc") from exc
+    warnings: list[str] = []
+    if filter_harmonics:
+        notes, dropped = _apply_filter(notes)
+        if dropped:
+            warnings.append(f"bỏ {dropped} nốt hoạ âm")
     if not notes:
         raise ProcessingError(_NO_NOTES_MSG)
     notes.sort(key=lambda n: (n.onset_s, n.pitch))
-    return notes
+    return notes, warnings

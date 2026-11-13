@@ -174,6 +174,12 @@ class ConvertOptions:
     tuning: Tuning
     time_signature: TimeSignature
     force: bool
+    max_fret: int = 24
+    filter_harmonics: bool = False  # B4a is opt-in: it drops real octaves in chords
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.max_fret <= 24:
+            raise ValueError("max_fret must be in 0..24")
 
 
 @dataclass(frozen=True)

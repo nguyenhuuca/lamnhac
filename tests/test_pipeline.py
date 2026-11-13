@@ -1,6 +1,7 @@
 import json
 import socket
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -110,3 +111,22 @@ def test_real_model_without_network(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert result.note_count >= 0.8 * len(truth["notes"])
     assert result.outputs[0].exists()
     assert attempts == []
+
+
+def test_transcribe_warnings_merged_and_options_forwarded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    truth = json.loads((FIXTURES / "scale_c.json").read_text())
+    events = [(n["onset_s"], n["offset_s"], n["pitch"], 0.8, None) for n in truth["notes"]]
+    first = truth["notes"][0]  # quiet octave above the first note: a harmonic
+    events.append((first["onset_s"], first["offset_s"], first["pitch"] + 12, 0.1, None))
+    monkeypatch.setattr(transcribe, "_predict", lambda *_a: events)
+    # Default: the filter is off (B4a is opt-in), so the overtone stays.
+    result = pipeline.convert(_opts(tmp_path), lambda _m: None)
+    assert "bỏ 1 nốt hoạ âm" not in result.warnings
+    assert result.note_count == len(truth["notes"]) + 1
+
+    filtered = replace(_opts(tmp_path, force=True), filter_harmonics=True)
+    result = pipeline.convert(filtered, lambda _m: None)
+    assert "bỏ 1 nốt hoạ âm" in result.warnings
+    assert result.note_count == len(truth["notes"])

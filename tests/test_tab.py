@@ -163,3 +163,27 @@ def test_performance_2000_slots() -> None:
     print(f"assign 2000 slots: {elapsed:.2f}s")
     assert len(tab.slots) == len(score.slots)
     assert elapsed < 10.0
+
+
+def test_max_fret_limits_frets() -> None:
+    pitches = [[p] for p in (40, 45, 50, 55, 60, 64, 67)]
+    tab, warnings = assign(make_score(pitches), STANDARD_TUNING, max_fret=5)
+    frets = [n.fret for s in tab.slots for n in s.notes]
+    assert len(frets) == len(pitches) and max(frets) <= 5
+    assert warnings == []
+
+
+def test_max_fret_drops_note_only_playable_above_limit() -> None:
+    tab, warnings = assign(make_score([[64], [76]]), STANDARD_TUNING, max_fret=5)
+    assert [len(s.notes) for s in tab.slots[:2]] == [1, 0]
+    assert warnings == ["bỏ 1 nốt ngoài tầm cây đàn (phím ≤ 5)"]
+
+
+def test_default_range_warning_has_no_fret_limit() -> None:
+    _, warnings = assign(make_score([[30]]), STANDARD_TUNING)
+    assert warnings == ["bỏ 1 nốt ngoài tầm cây đàn"]
+
+
+def test_max_fret_out_of_range_rejected() -> None:
+    with pytest.raises(ValueError):
+        assign(make_score([[64]]), STANDARD_TUNING, max_fret=25)

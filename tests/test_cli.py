@@ -148,6 +148,9 @@ def test_gp5_writer_failure_exit_five_keeps_musicxml(
         (["--time", "6/8"], "time_signature", TimeSignature(6, 8)),
         (["--tempo", "96"], "tempo", 96.0),
         (["--force"], "force", True),
+        (["--max-fret", "5"], "max_fret", 5),
+        (["--max-fret", "0"], "max_fret", 0),
+        (["--filter-harmonics"], "filter_harmonics", True),
         (["--format", "gp5"], "formats", frozenset({"gp5"})),
     ],
 )
@@ -170,6 +173,8 @@ def test_default_options_and_out_dir(monkeypatch: pytest.MonkeyPatch) -> None:
     assert opts.out_dir == SCALE.resolve().parent
     assert opts.tempo is None
     assert opts.force is False
+    assert opts.max_fret == 24
+    assert opts.filter_harmonics is False
     assert opts.formats == frozenset({"gp5", "musicxml"})
 
 
@@ -234,3 +239,8 @@ def test_convert_end_to_end(tmp_path: Path) -> None:
     for k in range(1, 7):
         assert f"[{k}/6]" in proc.stderr
     assert "Traceback" not in proc.stderr
+
+
+@pytest.mark.parametrize("value", ["25", "-1", "abc"])
+def test_bad_max_fret_exit_two(value: str, tmp_path: Path) -> None:
+    assert main(["convert", str(SCALE), "-o", str(tmp_path), "--max-fret", value]) == 2

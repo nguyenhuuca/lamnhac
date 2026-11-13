@@ -47,10 +47,10 @@ def parse_tuning(names: str) -> Tuning:
     return Tuning(tuple(strings))
 
 
-def _assignments(pitches: list[int], tuning: tuple[int, ...]) -> list[Fingering]:
+def _assignments(pitches: list[int], tuning: tuple[int, ...], max_fret: int) -> list[Fingering]:
     """All ways to give each pitch a distinct string, as (string, fret) sorted by string."""
     options = [
-        [(s, p - t) for s, t in enumerate(tuning) if 0 <= p - t <= MAX_FRET] for p in pitches
+        [(s, p - t) for s, t in enumerate(tuning) if 0 <= p - t <= max_fret] for p in pitches
     ]
     results: list[Fingering] = []
 
@@ -92,10 +92,12 @@ class _Prepared:
     states: list[Fingering]
 
 
-def _prepare(slot: Slot, tuning: tuple[int, ...], counts: dict[str, int]) -> _Prepared:
+def _prepare(
+    slot: Slot, tuning: tuple[int, ...], max_fret: int, counts: dict[str, int]
+) -> _Prepared:
     notes: list[GridNote] = []
     for n in slot.notes:
-        if any(0 <= n.pitch - t <= MAX_FRET for t in tuning):
+        if any(0 <= n.pitch - t <= max_fret for t in tuning):
             notes.append(n)
         else:
             counts["range"] += 1
@@ -109,7 +111,7 @@ def _prepare(slot: Slot, tuning: tuple[int, ...], counts: dict[str, int]) -> _Pr
     while len(notes) > 6:
         drop_lowest()
     while notes:
-        fingerings = _assignments([n.pitch for n in notes], tuning)
+        fingerings = _assignments([n.pitch for n in notes], tuning, max_fret)
         if fingerings:
             compact = [f for f in fingerings if _span(f) <= MAX_SPAN]
             if compact:
@@ -174,11 +176,15 @@ def _beam_search(slots: list[list[Fingering]]) -> list[Fingering]:
     return out
 
 
-def assign(score: Score, tuning: Tuning, title: str = "") -> tuple[TabScore, list[str]]:
+def assign(
+    score: Score, tuning: Tuning, title: str = "", max_fret: int = MAX_FRET
+) -> tuple[TabScore, list[str]]:
     """Assign string and fret to every note. Returns the tab and Vietnamese warnings."""
+    if not 0 <= max_fret <= MAX_FRET:
+        raise ValueError(f"max_fret phải nằm trong khoảng 0..{MAX_FRET}")
     t = tuning.strings
     counts = {"range": 0, "unassignable": 0, "span": 0}
-    prepared = [_prepare(s, t, counts) for s in score.slots]
+    prepared = [_prepare(s, t, max_fret, counts) for s in score.slots]
     chosen = _beam_search([p.states for p in prepared if p.notes])
 
     out: list[TabSlot] = []
@@ -192,7 +198,8 @@ def assign(score: Score, tuning: Tuning, title: str = "") -> tuple[TabScore, lis
 
     warnings: list[str] = []
     if counts["range"]:
-        warnings.append(f"bỏ {counts['range']} nốt ngoài tầm cây đàn")
+        limit = f" (phím ≤ {max_fret})" if max_fret < MAX_FRET else ""
+        warnings.append(f"bỏ {counts['range']} nốt ngoài tầm cây đàn{limit}")
     if counts["unassignable"]:
         warnings.append(
             f"bỏ {counts['unassignable']} nốt không thể gán dây khác nhau trong cùng slot"
