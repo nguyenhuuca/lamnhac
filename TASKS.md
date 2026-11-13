@@ -4,12 +4,12 @@
 
 - [x] T1 Project scaffold, models, errors, gates (be9de6d)
 - [x] T2 Install spike + report (basic-pitch, soundfile MP3, PyGuitarPro, music21, pip-audit) (263706f)
-- [~] T3 `audio.load` + synthetic fixtures
+- [x] T3 `audio.load` + synthetic fixtures (ae66a20)
 - [x] T4 `durations.split` (b8deb6f)
-- [ ] T5 `transcribe`
-- [ ] T6 `rhythm.analyze` + `rhythm.quantize`
+- [x] T5 `transcribe` (cd32b67)
+- [x] T6 `rhythm.analyze` + `rhythm.quantize` (4679d48)
 - [x] T7 `tab.assign` (7993603)
-- [~] T8 `export_musicxml`
-- [ ] T9 `pipeline` + `cli` (MusicXML only)
+- [x] T8 `export_musicxml` (a0d8234)
+- [~] T9 `pipeline` + `cli` (MusicXML only)
 - [ ] T10 `export_gp5` + pipeline wiring
 - [ ] T11 Eval G1/G3 + report

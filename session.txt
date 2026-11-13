@@ -1,8 +1,8 @@
 task: MP3 -> Guitar Pro CLI (lamnhac)
 status: in_progress
-progress: 45
-done: T1 scaffold be9de6d; T2 install spike 263706f; T4 durations b8deb6f; T7 tab 7993603
-doing: T3 audio.load + fixtures; T8 export_musicxml
-next: T5 transcribe; T6 rhythm; T9 pipeline+cli; T10 gp5; T11 eval
+progress: 65
+done: T1 be9de6d; T2 263706f; T3 ae66a20; T4 b8deb6f; T5 cd32b67; T6 4679d48; T7 7993603; T8 a0d8234
+doing: T6b beat latency fix (spec B7a); T9 pipeline + cli
+next: T10 export_gp5; T11 eval G1/G3; swarm-review; owner checks files in Guitar Pro 8
 plan: docs/plans/plan-mp3-to-guitarpro.md
-updated: 2026-11-13 21:35
+updated: 2026-11-13 21:58
