@@ -2,6 +2,7 @@
 
 import math
 from collections.abc import Sequence
+from itertools import pairwise
 
 import librosa
 import numpy as np
@@ -45,12 +46,24 @@ def grid_position(t: float, beat_times: Sequence[float]) -> float:
     return SLOTS_PER_BEAT * (i + frac)
 
 
-def _fold_tempo(bpm: float) -> float:
+def _fold_tempo(bpm: float, beats: Sequence[float]) -> tuple[float, list[float]]:
+    """Fold a detected tempo into 60-200 BPM, folding the beat grid with it (B6).
+
+    Halving the tempo keeps every other beat; doubling inserts the midpoint of each pair, so a
+    grid beat is always one quarter note of the returned tempo.
+    """
+    grid = [float(b) for b in beats]
     while bpm < MIN_TEMPO:
         bpm *= 2
+        mids = [(a + b) / 2 for a, b in pairwise(grid)]
+        grid = [t for pair in zip(grid, mids, strict=False) for t in pair] + [grid[-1]]
     while bpm > MAX_TEMPO:
         bpm /= 2
-    return bpm
+        kept = grid[::2]
+        if len(kept) < 2:
+            kept = [grid[0], grid[0] + 2 * (grid[1] - grid[0])]
+        grid = kept
+    return bpm, grid
 
 
 def _even_beats(start_s: float, tempo: float, duration_s: float) -> list[float]:
@@ -79,25 +92,29 @@ def align_beats(beat_times: Sequence[float], onsets: Sequence[float]) -> tuple[f
     return tuple(float(b) + shift for b in beats)
 
 
-def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], numerator: int) -> int:
+def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots: int) -> int:
+    """Return the downbeat as a slot offset in [0, bar_slots) (B8)."""
     if not notes:
         return 0
     positions = [(grid_position(n.onset_s, beats), n.velocity) for n in notes]
-    first_onset = min(n.onset_s for n in notes)
+    first_p = grid_position(min(n.onset_s for n in notes), beats)
+    lo = min(p for p, _ in positions) - DOWNBEAT_WINDOW
+    hi = max(p for p, _ in positions) + DOWNBEAT_WINDOW
+    step = 4 if bar_slots % 4 == 0 else 2
     scores: dict[int, float] = {}
-    for d in range(min(numerator, len(beats))):
+    for o in range(0, bar_slots, step):
         total = 0.0
-        for idx in range(d, len(beats), numerator):
-            centre = SLOTS_PER_BEAT * idx
+        for k in range(math.floor((lo - o) / bar_slots), math.ceil((hi - o) / bar_slots) + 1):
+            centre = o + k * bar_slots
             # Max, not sum: a chord on a weak beat must not outweigh an accented single note.
             total += max(
                 (v for p, v in positions if abs(p - centre) <= DOWNBEAT_WINDOW + _EPS),
                 default=0.0,
             )
-        scores[d] = total
+        scores[o] = total
     best = max(scores.values())
-    tied = [d for d, s in scores.items() if s >= best - _EPS]
-    return min(tied, key=lambda d: (abs(beats[d] - first_onset), d))
+    tied = [o for o, sc in scores.items() if sc >= best - _EPS]
+    return min(tied, key=lambda o: (abs(o - first_p), o))
 
 
 def analyze(
@@ -127,18 +144,19 @@ def analyze(
     # offset is ~0 and the shift is harmless
     beats = list(align_beats(beats, [n.onset_s for n in notes]))
 
+    bar_slots = time_sig.bar_slots
     if tempo is not None:
         return RhythmInfo(
-            float(tempo),
-            tuple(beats),
-            _pick_downbeat(beats, notes, time_sig.numerator),
-            time_sig,
-            "user",
+            float(tempo), tuple(beats), _pick_downbeat(beats, notes, bar_slots), time_sig, "user"
         )
-    bpm = _fold_tempo(60.0 / float(np.median(np.diff(beats))))
+    bpm, beats = _fold_tempo(60.0 / float(np.median(np.diff(beats))), beats)
     return RhythmInfo(
-        bpm, tuple(beats), _pick_downbeat(beats, notes, time_sig.numerator), time_sig, "detected"
+        bpm, tuple(beats), _pick_downbeat(beats, notes, bar_slots), time_sig, "detected"
     )
+
+
+def _round_half_up(x: float) -> int:
+    return math.floor(x + 0.5)
 
 
 def quantize(notes: Sequence[NoteEvent], rhythm: RhythmInfo) -> Score:
@@ -146,7 +164,7 @@ def quantize(notes: Sequence[NoteEvent], rhythm: RhythmInfo) -> Score:
     beats = rhythm.beat_times_s
     placed = [(grid_position(n.onset_s, beats), grid_position(n.offset_s, beats), n) for n in notes]
 
-    bar1 = float(SLOTS_PER_BEAT * rhythm.downbeat_index)
+    bar1 = float(rhythm.downbeat_slot)
     if placed:
         first_p = min(p for p, _, _ in placed)
         m = max(0, math.ceil((bar1 - PICKUP_TOLERANCE - first_p) / bar_slots - _EPS))
@@ -155,8 +173,8 @@ def quantize(notes: Sequence[NoteEvent], rhythm: RhythmInfo) -> Score:
     groups: dict[int, dict[int, float]] = {}  # start -> pitch -> velocity
     longest: dict[int, int] = {}
     for p_on, p_off, note in placed:
-        start = max(0, round(p_on - bar1))
-        length = max(1, round(p_off - bar1) - start)
+        start = max(0, _round_half_up(p_on - bar1))
+        length = max(1, _round_half_up(p_off - bar1) - start)
         pitches = groups.setdefault(start, {})
         if pitches.get(note.pitch, -1.0) < note.velocity:
             pitches[note.pitch] = note.velocity

@@ -32,7 +32,7 @@ def rhythm(**kw: Any) -> RhythmInfo:
     args: dict[str, Any] = {
         "tempo_bpm": 120.0,
         "beat_times_s": (0.0, 0.5, 1.0),
-        "downbeat_index": 0,
+        "downbeat_slot": 0,
         "time_signature": TS44,
         "tempo_source": "user",
     }
@@ -84,7 +84,8 @@ def test_rhythm_info() -> None:
         {"tempo_bpm": 301.0},
         {"beat_times_s": (0.0,)},
         {"beat_times_s": (0.0, 0.5, 0.5)},
-        {"downbeat_index": -1},
+        {"downbeat_slot": -1},
+        {"downbeat_slot": 16},
     ):
         with pytest.raises(ValueError, match=r"must|needs"):
             rhythm(**kw)

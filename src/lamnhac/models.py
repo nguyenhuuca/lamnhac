@@ -77,7 +77,7 @@ class TimeSignature:
 class RhythmInfo:
     tempo_bpm: float  # quarter-note BPM
     beat_times_s: tuple[float, ...]
-    downbeat_index: int
+    downbeat_slot: int  # slot of the downbeat within a bar, 0 <= slot < bar_slots
     time_signature: TimeSignature
     tempo_source: TempoSource
 
@@ -88,8 +88,8 @@ class RhythmInfo:
             raise ValueError("beat_times_s needs at least 2 entries")
         if any(b <= a for a, b in zip(self.beat_times_s, self.beat_times_s[1:], strict=False)):
             raise ValueError("beat_times_s must be strictly increasing")
-        if self.downbeat_index < 0:
-            raise ValueError("downbeat_index must be >= 0")
+        if not 0 <= self.downbeat_slot < self.time_signature.bar_slots:
+            raise ValueError("downbeat_slot must be in 0..bar_slots-1")
 
 
 @dataclass(frozen=True)

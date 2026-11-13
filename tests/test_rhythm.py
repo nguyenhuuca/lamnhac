@@ -1,4 +1,5 @@
 import json
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,14 @@ from lamnhac.models import (
     Slot,
     TimeSignature,
 )
-from lamnhac.rhythm import _pick_downbeat, align_beats, analyze, grid_position, quantize
+from lamnhac.rhythm import (
+    _fold_tempo,
+    _pick_downbeat,
+    align_beats,
+    analyze,
+    grid_position,
+    quantize,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 T44 = TimeSignature(4, 4)
@@ -111,7 +119,7 @@ def test_no_extra_bar_when_last_note_ends_on_bar_line() -> None:
 def test_pickup_bar_when_first_note_precedes_downbeat() -> None:
     # downbeat is beat 2 (t=1.0, slot 8); first note sits one beat before it.
     notes = [_note(0.5, 0.75, 40), _note(1.0, 1.5, 45)]
-    score = quantize(notes, _info(_even(), downbeat=2))
+    score = quantize(notes, _info(_even(), downbeat=8))
     flat = _flat(score.slots)
     assert flat[0] == (0, 12, ())  # bar 1 starts one bar before the downbeat (slot 8 - 16)
     assert flat[1] == (12, 2, (40,))
@@ -122,7 +130,7 @@ def test_pickup_bar_when_first_note_precedes_downbeat() -> None:
 def test_note_within_half_slot_before_downbeat_needs_no_pickup() -> None:
     # 0.06 s before the beat at 0.5 s is 0.48 slot early: bar 1 still starts at the downbeat.
     notes = [_note(0.44, 0.6, 40)]
-    score = quantize(notes, _info(_even(), downbeat=1))
+    score = quantize(notes, _info(_even(), downbeat=4))
     assert score.slots[0].start == 0
     assert score.slots[0].notes
 
@@ -193,7 +201,7 @@ def test_downbeat_follows_accents(offset: int) -> None:
     clip = _clicks(120, 10)
     notes = [_note(i * 0.5, i * 0.5 + 0.2, 40, 1.0 if i % 4 == offset else 0.4) for i in range(19)]
     info = analyze(clip, notes, 120.0, T44)
-    t = info.beat_times_s[info.downbeat_index]
+    t = info.beat_times_s[info.downbeat_slot // 4]
     accented = [n.onset_s for n in notes if n.velocity == 1.0]
     assert min(abs(t - a) for a in accented) < 0.1
 
@@ -289,4 +297,80 @@ def test_downbeat_prefers_accented_single_note_over_weak_beat_chord() -> None:
         notes.append(NoteEvent(b * 0.5, b * 0.5 + 0.4, 52, 1.0))
     for b in (2, 6):
         notes += [NoteEvent(b * 0.5, b * 0.5 + 0.4, p, 0.6) for p in (48, 55, 64)]
-    assert _pick_downbeat(beats, notes, 4) == 0
+    assert _pick_downbeat(beats, notes, 16) == 0
+
+
+def _accents(period_beats: int, count: int, offset: int = 0) -> list[NoteEvent]:
+    return [
+        _note(i * 0.5, i * 0.5 + 0.2, 40, 1.0 if i % period_beats == offset else 0.4)
+        for i in range(count)
+    ]
+
+
+def test_downbeat_6_8_accent_every_three_quarters() -> None:
+    # 6/8: bar_slots 12, offsets 0, 4, 8. Accents every 3 beats (12 slots) at beat 1 (slot 4).
+    beats = _even(30)
+    notes = _accents(3, 24, offset=1)
+    assert _pick_downbeat(beats, notes, 12) == 4
+
+
+def test_downbeat_2_2_bar_of_eight_slots() -> None:
+    # 2/2: bar_slots 8, step 4. Accent every 2 beats at beat 1.
+    assert _pick_downbeat(_even(30), _accents(2, 24, offset=1), 8) == 4
+
+
+def test_downbeat_3_8_uses_step_two() -> None:
+    # 3/8: bar_slots 6, step 2. Notes every 6 slots (1.5 beats) with accent at slot 2 of the bar.
+    beats = _even(30)
+    notes = []
+    for i in range(12):
+        t = i * 0.75 + 0.25  # 0.25 s = 2 slots at 0.5 s per beat
+        notes.append(_note(t, t + 0.1, 40, 1.0))
+        notes.append(_note(t + 0.25, t + 0.3, 40, 0.3))
+    assert _pick_downbeat(beats, notes, 6) == 2
+
+
+def test_downbeat_slot_is_less_than_bar_slots() -> None:
+    assert 0 <= _pick_downbeat(_even(), _accents(4, 19, offset=3), 16) < 16
+
+
+def test_quantize_rounds_half_up() -> None:
+    # onset exactly 2.5 slots after beat 0 -> slot 3 (banker's round gives 2); end 4.5 -> 5.
+    beats = _even()
+    t = 0.5 * 2.5 / 4
+    notes = [_note(t, 0.5 * 4.5 / 4, 40)]
+    score = quantize(notes, _info(beats))
+    assert _flat(score.slots)[1] == (3, 2, (40,))
+
+
+def test_fold_halving_keeps_every_other_beat() -> None:
+    beats = [0.25 * i for i in range(21)]  # 240 BPM
+    bpm, grid = _fold_tempo(240.0, beats)
+    assert bpm == pytest.approx(120.0)
+    assert grid == beats[::2]
+
+
+def test_fold_doubling_inserts_midpoints() -> None:
+    beats = [1.5 * i for i in range(5)]  # 40 BPM
+    bpm, grid = _fold_tempo(40.0, beats)
+    assert bpm == pytest.approx(80.0)
+    assert grid == pytest.approx([0.75 * i for i in range(9)])
+
+
+def test_fold_keeps_two_beats() -> None:
+    _, grid = _fold_tempo(400.0, [0.0, 0.15])
+    assert len(grid) >= 2
+
+
+def test_detected_fast_tempo_notes_land_four_slots_apart_after_fold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import librosa
+
+    beats = np.array([0.25 * i for i in range(40)])  # tracker reports 240 BPM
+    monkeypatch.setattr(librosa.beat, "beat_track", lambda **_: (240.0, beats))
+    notes = [_note(0.5 * i, 0.5 * i + 0.2, 40 + i) for i in range(6)]  # every other tracked beat
+    info = analyze(_clip(np.zeros(SAMPLE_RATE * 10), 10.0), notes, None, T44)
+    assert info.tempo_bpm == pytest.approx(120.0)
+    starts = [s.start for s in quantize(notes, info).slots if s.notes]
+    assert [b - a for a, b in pairwise(starts)] == [4] * 5
