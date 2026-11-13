@@ -1,8 +1,7 @@
 task: MP3 -> Guitar Pro CLI (lamnhac)
 status: in_progress
-progress: 65
-done: T1 be9de6d; T2 263706f; T3 ae66a20; T4 b8deb6f; T5 cd32b67; T6 4679d48; T7 7993603; T8 a0d8234
-doing: T6b beat latency fix (spec B7a); T9 pipeline + cli
-next: T10 export_gp5; T11 eval G1/G3; swarm-review; owner checks files in Guitar Pro 8
+progress: 85
+done: T1 be9de6d; T2 263706f; T3 ae66a20; T4 b8deb6f; T5 cd32b67; T6 4679d48+e5dd248; T7 7993603; T8 a0d8234; T9 d1d0655; T10 c185dc5
+next: owner opens scratchpad/out files in Guitar Pro 8; T11 eval (needs GuitarSet download); swarm-review
 plan: docs/plans/plan-mp3-to-guitarpro.md
-updated: 2026-11-13 21:58
+updated: 2026-11-13 22:05

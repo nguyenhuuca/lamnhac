@@ -10,6 +10,6 @@
 - [x] T6 `rhythm.analyze` + `rhythm.quantize` (4679d48)
 - [x] T7 `tab.assign` (7993603)
 - [x] T8 `export_musicxml` (a0d8234)
-- [~] T9 `pipeline` + `cli` (MusicXML only)
-- [ ] T10 `export_gp5` + pipeline wiring
+- [x] T9 `pipeline` + `cli` (MusicXML only) (d1d0655)
+- [x] T10 `export_gp5` + pipeline wiring (c185dc5)
 - [ ] T11 Eval G1/G3 + report
