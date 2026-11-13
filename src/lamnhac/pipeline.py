@@ -7,7 +7,7 @@ from collections.abc import Callable
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from lamnhac import audio, export_musicxml, rhythm, tab, transcribe
+from lamnhac import audio, export_gp5, export_musicxml, rhythm, tab, transcribe
 from lamnhac.errors import OutputError
 from lamnhac.models import ConvertOptions, ConvertResult, Format, TabScore
 
@@ -16,13 +16,8 @@ log = logging.getLogger("lamnhac")
 _STEPS = 6
 
 
-def _write_gp5(_tab: TabScore, _path: Path) -> None:
-    # TODO(T10): replace with export_gp5.write.
-    raise OutputError("gp5 chưa hỗ trợ")
-
-
 _WRITERS: dict[Format, tuple[str, Callable[[TabScore, Path], None]]] = {
-    "gp5": ("gp5", _write_gp5),
+    "gp5": ("gp5", export_gp5.write),
     "musicxml": ("musicxml", export_musicxml.write),
 }
 

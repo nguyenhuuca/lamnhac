@@ -2,6 +2,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import guitarpro
+import music21
 import numpy as np
 import pytest
 import soundfile as sf
@@ -86,9 +88,11 @@ def test_no_notes_exit_four(tmp_path: Path) -> None:
 def test_convert_end_to_end(tmp_path: Path) -> None:
     proc = run("convert", SCALE, "-o", tmp_path, "--tempo", "120")
     assert proc.returncode == 0, proc.stderr
-    expected = tmp_path / "scale_c.musicxml"
-    assert proc.stdout.splitlines() == [str(expected)]
-    assert expected.exists()
+    expected = [tmp_path / "scale_c.gp5", tmp_path / "scale_c.musicxml"]
+    assert proc.stdout.splitlines() == [str(p) for p in expected]
+    assert all(p.exists() for p in expected)
+    assert guitarpro.parse(str(expected[0])).tracks[0].name == "Guitar"
+    assert music21.converter.parse(str(expected[1])) is not None
     for k in range(1, 7):
         assert f"[{k}/6]" in proc.stderr
     assert "Traceback" not in proc.stderr

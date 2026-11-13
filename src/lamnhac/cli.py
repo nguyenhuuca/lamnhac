@@ -14,8 +14,7 @@ from lamnhac.models import ConvertOptions, Format, TimeSignature
 from lamnhac.tab import parse_tuning
 
 _FORMATS: tuple[Format, ...] = ("gp5", "musicxml")
-# TODO(T10): default becomes "gp5,musicxml" once export_gp5 exists.
-_DEFAULT_FORMAT = "musicxml"
+_DEFAULT_FORMAT = "gp5,musicxml"
 
 
 def build_parser() -> argparse.ArgumentParser:
