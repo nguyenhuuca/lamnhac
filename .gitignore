@@ -13,3 +13,5 @@ __pycache__/
 .hypothesis/
 .claude/worktrees/
 .idea/
+# owner recordings: keep out of git
+tests/fixtures/testgod.mp3
