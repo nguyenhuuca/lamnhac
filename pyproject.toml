@@ -37,6 +37,10 @@ strict = true
 module = ["librosa.*", "soundfile.*", "basic_pitch.*", "music21.*", "guitarpro.*", "mir_eval.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "lamnhac.export_musicxml"
+disallow_untyped_calls = false  # music21 is untyped
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["eval: slow evaluation on external data, deselected by default"]

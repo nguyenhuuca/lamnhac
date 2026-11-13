@@ -98,7 +98,10 @@ def test_one_format_failing_does_not_stop_the_other(
 
 
 def test_real_model_without_network(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    def no_net(*_a: Any, **_k: Any) -> None:
+    attempts: list[object] = []
+
+    def no_net(*a: Any, **_k: Any) -> None:
+        attempts.append(a)
         raise AssertionError("network access attempted")
 
     monkeypatch.setattr(socket.socket, "connect", no_net)
@@ -106,3 +109,4 @@ def test_real_model_without_network(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     truth = json.loads((FIXTURES / "scale_c.json").read_text())
     assert result.note_count >= 0.8 * len(truth["notes"])
     assert result.outputs[0].exists()
+    assert attempts == []

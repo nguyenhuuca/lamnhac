@@ -28,7 +28,7 @@ def write(tab: TabScore, path: Path) -> None:
     tmp = path.with_name(f"{path.stem}.tmp-{os.getpid()}.musicxml")
     try:
         score = _build(tab)
-        score.write("musicxml", fp=str(tmp))  # type: ignore[no-untyped-call]
+        score.write("musicxml", fp=str(tmp))
         _postprocess(tmp, tab)
         os.replace(tmp, path)
     except Exception as exc:
@@ -39,26 +39,26 @@ def write(tab: TabScore, path: Path) -> None:
 def _build(tab: TabScore) -> stream.Score:
     ts = tab.rhythm.time_signature
     bar_slots = ts.bar_slots
-    part = stream.Part()  # type: ignore[no-untyped-call]
+    part = stream.Part()
     measures: dict[int, stream.Measure] = {}
 
     def measure_at(index: int) -> stream.Measure:
         if index not in measures:
             m = stream.Measure(number=index + 1)
             measures[index] = m
-            part.append(m)  # type: ignore[no-untyped-call]
+            part.append(m)
         return measures[index]
 
     for slot in tab.slots:
         pos = slot.start
         for dur, tied_next in split(slot.start, slot.length, bar_slots):
-            measure_at(pos // bar_slots).append(  # type: ignore[no-untyped-call]
+            measure_at(pos // bar_slots).append(
                 _element(slot, dur, tied_next, first=pos == slot.start)
             )
             pos += dur
 
     first = measure_at(0)
-    first.insert(0, clef.TabClef())  # type: ignore[no-untyped-call]
+    first.insert(0, clef.TabClef())
     first.insert(0, layout.StaffLayout(staffLines=6))
     first.insert(0, meter.TimeSignature(f"{ts.numerator}/{ts.denominator}"))
     first.insert(0, tempo.MetronomeMark(number=round(tab.rhythm.tempo_bpm)))
@@ -78,8 +78,8 @@ def _element(slot: TabSlot, dur: int, tied_next: bool, first: bool) -> note.Gene
     notes = []
     for tn in slot.notes:
         n = note.Note(midi=tn.pitch, quarterLength=ql)
-        n.articulations.append(articulations.StringIndication(tn.string))  # type: ignore[no-untyped-call]
-        n.articulations.append(articulations.FretIndication(tn.fret))  # type: ignore[no-untyped-call]
+        n.articulations.append(articulations.StringIndication(tn.string))
+        n.articulations.append(articulations.FretIndication(tn.fret))
         notes.append(n)
     el: note.GeneralNote
     if len(notes) == 1:
@@ -88,9 +88,9 @@ def _element(slot: TabSlot, dur: int, tied_next: bool, first: bool) -> note.Gene
         el = chord.Chord(notes)
         el.quarterLength = ql
     if tied_next:
-        el.tie = tie.Tie("start" if first else "continue")  # type: ignore[no-untyped-call]
+        el.tie = tie.Tie("start" if first else "continue")
     elif not first:
-        el.tie = tie.Tie("stop")  # type: ignore[no-untyped-call]
+        el.tie = tie.Tie("stop")
     return el
 
 
