@@ -36,7 +36,10 @@ Option A. It is the only combination that is installable on Windows, offline, fr
 - The pipeline modules exchange an internal `NoteEvent` model (pitch, onset, duration, velocity), so the transcription backend can be replaced without touching quantize, tab or export.
 - Tests: a Note F1 regression test with `mir_eval` on a small fixture set, plus round-trip tests that read the `.gp5` back with PyGuitarPro and the MusicXML back with music21.
 - Security: all three run locally. The model weights ship inside the basic-pitch package, so there are no runtime downloads (R9).
+- TensorFlow < 2.15.1 is old and has published advisories. The install spike runs `pip-audit` on the resolved lock file and records the result here. The risk is lower than usual because the tool only loads the bundled model and the user's own local audio, but any advisory that applies to that path blocks the choice.
+- The spike also checks that PyGuitarPro handles titles with non-ASCII characters (spec B17 ASCII-folds them anyway) and whether music21 writes `<staff-tuning>` and a TAB clef (spec B18).
 
 ## Changelog
 
 - 2026-11-13: created.
+- 2026-11-13: added pip-audit and spike checks after spec review.

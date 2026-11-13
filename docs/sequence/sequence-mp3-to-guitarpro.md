@@ -3,7 +3,7 @@
 - **PRD:** [PRD-mp3-to-guitarpro](../prd/PRD-mp3-to-guitarpro.md)
 - **ADR:** [0001-transcription-and-export-libraries](../adr/0001-transcription-and-export-libraries.md)
 - **Spec:** [spec-mp3-to-guitarpro](../specs/spec-mp3-to-guitarpro.md)
-- **Status:** Draft
+- **Status:** Draft (rev 2)
 
 ## 1. Convert thành công
 
@@ -27,31 +27,33 @@ sequenceDiagram
     U->>CLI: lamnhac convert bai.mp3
     CLI->>CLI: parse + validate args → ConvertOptions
     CLI->>P: convert(opts, progress)
-    P->>FS: check bai.gp5 / bai.musicxml do not exist (B13)
+    P->>FS: bai.gp5 / bai.musicxml must not exist (B14)
     P->>A: load(bai.mp3)  [1/6]
-    A->>FS: stat + soundfile.info (size ≤ 50 MB, ≤ 600 s)
+    A->>FS: stat + soundfile.info (≤ 50 MB, header ≤ 600 s)
+    A->>FS: soundfile.blocks (stop if > 605 s decoded)
     A-->>P: AudioClip (22050 Hz mono)
-    P->>T: transcribe(clip)  [2/6]
-    T->>BP: predict(path, thresholds B3)
-    BP-->>T: note_events
+    P->>T: transcribe(clip, tuning)  [2/6]
+    T->>BP: predict(clip.source, freq range from tuning)
+    BP-->>T: (model_output, midi, note_events)
     T-->>P: list[NoteEvent]
-    P->>R: analyze(clip, tempo=None, 4/4)  [3/6]
-    R-->>P: RhythmInfo(tempo, anchor, source=detected)
+    P->>R: analyze(clip, notes, tempo=None, 4/4)  [3/6]
+    R->>R: beat_track → beat times, median tempo, downbeat
+    R-->>P: RhythmInfo(tempo, beats, downbeat, source=detected)
     P->>R: quantize(notes, rhythm)  [4/6]
     R-->>P: Score(slots)
     P->>TB: assign(score, tuning)  [5/6]
     TB-->>P: TabScore, warnings
-    P->>G: write(tab, bai.gp5.tmp)  [6/6]
-    G->>FS: write + os.replace → bai.gp5
-    P->>X: write(tab, bai.musicxml.tmp)
-    X->>FS: write + os.replace → bai.musicxml
-    P-->>CLI: ConvertResult(outputs, warnings, rhythm)
+    P->>G: write(tab, bai.gp5)  [6/6]
+    G->>FS: bai.tmp-PID.gp5 → os.replace → bai.gp5
+    P->>X: write(tab, bai.musicxml)
+    X->>FS: bai.tmp-PID.musicxml → os.replace → bai.musicxml
+    P-->>CLI: ConvertResult(outputs, errors=[], warnings, rhythm)
     CLI-->>U: stdout: 2 paths · stderr: summary · exit 0
 ```
 
 ## 2. Đầu vào không hợp lệ
 
-File không tồn tại, sai đuôi, lớn hơn 50 MB, dài hơn 10 phút, hoặc hỏng (B1, B2).
+File không tồn tại, sai đuôi, lớn hơn 50 MB, dài hơn 10 phút (theo header hoặc khi decode thực), hoặc hỏng (B1, B2).
 
 ```mermaid
 sequenceDiagram
@@ -60,13 +62,16 @@ sequenceDiagram
     participant CLI as cli.main
     participant P as pipeline.convert
     participant A as audio.load
+    participant FS as File system
 
     U->>CLI: lamnhac convert dai.mp3
     CLI->>P: convert(opts, progress)
     P->>A: load(dai.mp3)
-    A-->>P: raise InputError("file dài 742 s, tối đa 600 s")
+    A->>FS: soundfile.info → header says 120 s
+    A->>FS: soundfile.blocks … 605 s decoded, still going
+    A-->>P: raise InputError("file dài hơn 600 s")
     P-->>CLI: InputError
-    CLI-->>U: stderr: "lỗi: file dài 742 s, tối đa 600 s" · exit 3
+    CLI-->>U: stderr: "lỗi: file dài hơn 600 s" · exit 3
 ```
 
 ## 3. Không nhận được nốt nào
@@ -84,9 +89,9 @@ sequenceDiagram
 
     U->>CLI: lamnhac convert im_lang.mp3
     CLI->>P: convert(opts, progress)
-    P->>T: transcribe(clip)
-    T->>BP: predict(...)
-    BP-->>T: [] (no notes)
+    P->>T: transcribe(clip, tuning)
+    T->>BP: predict(clip.source, ...)
+    BP-->>T: note_events = []
     T-->>P: raise ProcessingError("không nhận được nốt nào")
     P-->>CLI: ProcessingError
     CLI-->>U: stderr: error message · exit 4
@@ -94,7 +99,7 @@ sequenceDiagram
 
 ## 4. Đầu ra đã tồn tại, hoặc một định dạng ghi lỗi
 
-Có hai nhánh. Nhánh a: file đã có và không truyền `--force`, nên dừng trước khi xử lý (B13). Nhánh b: có `--force`, nhưng `.gp5` ghi lỗi trong khi MusicXML vẫn ghi được (B16).
+Có hai nhánh. Nhánh a: file đã có và không truyền `--force`, nên dừng trước khi xử lý (B14). Nhánh b: có `--force`, nhưng `.gp5` ghi lỗi trong khi MusicXML vẫn ghi được (B15, B19).
 
 ```mermaid
 sequenceDiagram
@@ -116,11 +121,12 @@ sequenceDiagram
         U->>CLI: lamnhac convert bai.mp3 --force
         CLI->>P: convert(opts)
         Note over P: steps 1–5 as in §1
-        P->>G: write(tab, bai.gp5.tmp)
-        G->>FS: write → PermissionError
-        G-->>P: raise OutputError (tmp removed)
-        P->>X: write(tab, bai.musicxml.tmp)
-        X->>FS: write + os.replace → bai.musicxml
+        P->>G: write(tab, bai.gp5)
+        G->>FS: write bai.tmp-PID.gp5 → PermissionError
+        G->>FS: remove tmp
+        G-->>P: raise OutputError
+        P->>X: write(tab, bai.musicxml)
+        X->>FS: bai.tmp-PID.musicxml → os.replace → bai.musicxml
         P-->>CLI: ConvertResult(outputs=[bai.musicxml], errors=[gp5])
         CLI-->>U: stdout: bai.musicxml · stderr: gp5 error · exit 5
     end
