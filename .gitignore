@@ -4,3 +4,4 @@ scratchpad/
 evolve-out/
 *.sdlc-new
 .qa-junit.xml
+*.stackdump

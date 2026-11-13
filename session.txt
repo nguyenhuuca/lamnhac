@@ -1,7 +1,7 @@
 task: MP3 -> Guitar Pro CLI (lamnhac)
 status: in_progress
-progress: 20
-done: PRD approved; tech strategy + ADR-0001 0359812; spec rev 2 after review
-next: owner approves spec; /swarm-plan docs/specs/spec-mp3-to-guitarpro.md
-plan: docs/specs/spec-mp3-to-guitarpro.md
-updated: 2026-11-13 21:19
+progress: 25
+done: PRD approved; tech strategy + ADR-0001 0359812; spec rev 2 approved 49622f4; plan drafted
+next: owner approves plan; /swarm-execute docs/plans/plan-mp3-to-guitarpro.md (T1 scaffold)
+plan: docs/plans/plan-mp3-to-guitarpro.md
+updated: 2026-11-13 21:30

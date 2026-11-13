@@ -1,6 +1,6 @@
 # Spec: MP3 → Guitar Pro
 
-**Status:** Draft (rev 2: đã sửa theo review) · **PRD:** docs/prd/PRD-mp3-to-guitarpro.md · **ADRs:** ADR-0001 · **Date:** 2026-11-13
+**Status:** Approved (2026-11-13, rev 2) · **PRD:** docs/prd/PRD-mp3-to-guitarpro.md · **ADRs:** ADR-0001 · **Date:** 2026-11-13
 
 ## Overview
 
