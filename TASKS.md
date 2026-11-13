@@ -2,7 +2,7 @@
 
 ## MP3 → Guitar Pro CLI ([plan](docs/plans/plan-mp3-to-guitarpro.md))
 
-- [ ] T1 Project scaffold, models, errors, gates
+- [x] T1 Project scaffold, models, errors, gates
 - [ ] T2 Install spike + report (basic-pitch, soundfile MP3, PyGuitarPro, music21, pip-audit)
 - [ ] T3 `audio.load` + synthetic fixtures
 - [ ] T4 `durations.split`

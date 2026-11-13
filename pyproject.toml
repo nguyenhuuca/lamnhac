@@ -1,0 +1,42 @@
+[project]
+name = "lamnhac"
+version = "0.1.0"
+description = "Convert guitar solo MP3 files to Guitar Pro / MusicXML tabs"
+requires-python = ">=3.11,<3.12"
+dependencies = ["numpy"]
+
+[project.scripts]
+lamnhac = "lamnhac.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lamnhac"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["librosa.*", "soundfile.*", "basic_pitch.*", "music21.*", "guitarpro.*", "mir_eval.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["eval: slow evaluation on external data, deselected by default"]
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.170.15",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]

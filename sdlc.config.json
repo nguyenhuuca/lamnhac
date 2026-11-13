@@ -1,7 +1,18 @@
 {
   "deployBranch": "main",
   "maxLoc": 400,
-  "components": [],
+  "components": [
+    {
+      "name": "lamnhac",
+      "path": "",
+      "gates": [
+        "uv run ruff check",
+        "uv run ruff format --check",
+        "uv run mypy src",
+        "uv run pytest -m \"not eval\""
+      ]
+    }
+  ],
   "smoke": null,
   "buildWorkflow": null,
   "tracking": {
