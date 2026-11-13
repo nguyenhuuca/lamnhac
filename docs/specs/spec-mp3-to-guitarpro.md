@@ -131,6 +131,7 @@ Tempo luôn tính theo nốt đen, và một slot luôn là một nốt móc ké
 - **B16. Tách trường độ** (`durations.split`), dùng chung cho nốt và dấu lặng.
   - Đầu tiên cắt tại vạch nhịp.
   - Trong mỗi ô nhịp, đi tham lam từ vị trí đầu, mỗi lần chọn trường độ lớn nhất `d ∈ {16, 12, 8, 6, 4, 3, 2, 1}` slot sao cho `d ≤ phần còn lại` và vị trí hiện tại chia hết cho trường độ gốc của `d` (với `d` có chấm: 12 → 8, 6 → 4, 3 → 2). Cách này giữ các mảnh thẳng hàng với phách.
+  - Trường độ có chấm (12, 6, 3) chỉ được chọn khi `d` **bằng đúng** phần còn lại của đoạn, tức là nó kết thúc nốt hoặc chạm vạch nhịp. Ví dụ: 6 ô từ vị trí 2 → 2+4 (không phải 3+1+2), 8 ô từ vị trí 4 → 4+4, 7 ô từ vị trí 0 → 4+3, 6 ô từ vị trí 0 → 6.
   - Các mảnh của cùng một nốt nối với nhau bằng tie. Dấu lặng thì không có tie.
 - **B17. `.gp5`.**
   - Ghi bằng `guitarpro.write(song, path, version=(5, 1, 0))`.
