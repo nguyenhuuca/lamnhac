@@ -1,0 +1,45 @@
+{
+  "tempo_bpm": 120,
+  "notes": [
+    {
+      "onset_s": 0.0,
+      "offset_s": 0.45,
+      "pitch": 48
+    },
+    {
+      "onset_s": 0.5,
+      "offset_s": 0.95,
+      "pitch": 50
+    },
+    {
+      "onset_s": 1.0,
+      "offset_s": 1.45,
+      "pitch": 52
+    },
+    {
+      "onset_s": 1.5,
+      "offset_s": 1.95,
+      "pitch": 53
+    },
+    {
+      "onset_s": 2.0,
+      "offset_s": 2.45,
+      "pitch": 55
+    },
+    {
+      "onset_s": 2.5,
+      "offset_s": 2.95,
+      "pitch": 57
+    },
+    {
+      "onset_s": 3.0,
+      "offset_s": 3.45,
+      "pitch": 59
+    },
+    {
+      "onset_s": 3.5,
+      "offset_s": 3.95,
+      "pitch": 60
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "tempo_bpm": 97,
+  "time_signature": [
+    4,
+    4
+  ],
+  "downbeat_time_s": 0.0,
+  "notes": [
+    {
+      "onset_s": 0.0,
+      "offset_s": 0.5567,
+      "pitch": 40
+    },
+    {
+      "onset_s": 0.6186,
+      "offset_s": 0.8969,
+      "pitch": 47
+    },
+    {
+      "onset_s": 0.9278,
+      "offset_s": 1.2062,
+      "pitch": 52
+    },
+    {
+      "onset_s": 1.2371,
+      "offset_s": 1.7938,
+      "pitch": 45
+    },
+    {
+      "onset_s": 1.2371,
+      "offset_s": 1.7938,
+      "pitch": 52
+    },
+    {
+      "onset_s": 1.8557,
+      "offset_s": 2.134,
+      "pitch": 50
+    },
+    {
+      "onset_s": 2.1649,
+      "offset_s": 2.4433,
+      "pitch": 52
+    },
+    {
+      "onset_s": 2.4742,
+      "offset_s": 3.0309,
+      "pitch": 43
+    },
+    {
+      "onset_s": 3.0928,
+      "offset_s": 3.3711,
+      "pitch": 50
+    },
+    {
+      "onset_s": 3.4021,
+      "offset_s": 3.6804,
+      "pitch": 55
+    },
+    {
+      "onset_s": 3.7113,
+      "offset_s": 4.268,
+      "pitch": 47
+    },
+    {
+      "onset_s": 4.3299,
+      "offset_s": 4.8866,
+      "pitch": 52
+    },
+    {
+      "onset_s": 4.9485,
+      "offset_s": 5.5052,
+      "pitch": 45
+    },
+    {
+      "onset_s": 5.567,
+      "offset_s": 5.8454,
+      "pitch": 52
+    },
+    {
+      "onset_s": 5.8763,
+      "offset_s": 6.1546,
+      "pitch": 57
+    },
+    {
+      "onset_s": 6.1856,
+      "offset_s": 6.7423,
+      "pitch": 48
+    },
+    {
+      "onset_s": 6.1856,
+      "offset_s": 6.7423,
+      "pitch": 55
+    },
+    {
+      "onset_s": 6.1856,
+      "offset_s": 6.7423,
+      "pitch": 64
+    },
+    {
+      "onset_s": 6.8041,
+      "offset_s": 7.3608,
+      "pitch": 59
+    },
+    {
+      "onset_s": 7.4227,
+      "offset_s": 7.9794,
+      "pitch": 40
+    },
+    {
+      "onset_s": 8.0412,
+      "offset_s": 8.3196,
+      "pitch": 47
+    },
+    {
+      "onset_s": 8.3505,
+      "offset_s": 8.6289,
+      "pitch": 52
+    },
+    {
+      "onset_s": 8.6598,
+      "offset_s": 9.2165,
+      "pitch": 52
+    },
+    {
+      "onset_s": 9.2784,
+      "offset_s": 9.8351,
+      "pitch": 64
+    }
+  ]
+}
