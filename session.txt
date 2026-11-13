@@ -1,8 +1,7 @@
 task: MP3 -> Guitar Pro CLI (lamnhac)
-status: blocked
-progress: 90
-done: T1-T10 done c185dc5; review fixes 579b59c cd8f090 1632dd8; README + algorithms 3a3b346
-next: T11 eval G1/G3 on GuitarSet; owner opens scratchpad/out samples in Guitar Pro 8
-blocker: T11 needs GuitarSet downloaded manually by owner (or owner recordings + tabs)
+status: in_progress
+progress: 92
+done: T1-T10 c185dc5; review fixes 1632dd8; README 3a3b346; T12 harmonics + max-fret 70ed456
+next: owner compares scratchpad/testgod_* in Guitar Pro 8; T11 eval (needs GuitarSet); decide history purge of testgod.mp3
 plan: docs/plans/plan-mp3-to-guitarpro.md
-updated: 2026-11-13 22:45
+updated: 2026-11-13 23:20
