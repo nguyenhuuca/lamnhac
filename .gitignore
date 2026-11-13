@@ -1,0 +1,6 @@
+# agentic-sdlc
+scratchpad/
+.claude/settings.local.json
+evolve-out/
+*.sdlc-new
+.qa-junit.xml
