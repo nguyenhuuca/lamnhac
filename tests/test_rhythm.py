@@ -16,7 +16,7 @@ from lamnhac.models import (
     Slot,
     TimeSignature,
 )
-from lamnhac.rhythm import analyze, grid_position, quantize
+from lamnhac.rhythm import _pick_downbeat, align_beats, analyze, grid_position, quantize
 
 FIXTURES = Path(__file__).parent / "fixtures"
 T44 = TimeSignature(4, 4)
@@ -239,5 +239,54 @@ def test_riff_quantize_lands_on_expected_slots() -> None:
     # bar 1 may start a whole bar away from the true downbeat; allow bar-multiple shifts
     best = max(sum((e + shift) in got for e in expected) for shift in range(-32, 33, 16))
     print("riff slot match", best, "of", len(expected))
-    assert best > len(expected) / 2
+    # All onsets land exactly once the downbeat is right (B8 uses max velocity per beat).
+    assert best == len(expected)
     assert sum(s.length for s in score.slots) % 16 == 0
+
+
+def test_align_beats_removes_constant_lag() -> None:
+    beats = [0.03 + 0.5 * i for i in range(10)]
+    onsets = [0.5 * i for i in range(1, 9)]
+    assert align_beats(beats, onsets) == pytest.approx(tuple(0.5 * i for i in range(10)))
+
+
+def test_align_beats_fewer_than_four_offsets_unchanged() -> None:
+    beats = [0.03 + 0.5 * i for i in range(10)]
+    assert align_beats(beats, [0.5, 1.0, 1.5]) == tuple(beats)
+    assert align_beats(beats, []) == tuple(beats)
+
+
+def test_align_beats_clamps_to_eighth_of_interval() -> None:
+    beats = [0.5 * i for i in range(10)]
+    onsets = [0.5 * i + 0.12 for i in range(1, 9)]  # within 1/4 (0.125) but beyond 1/8
+    shifted = align_beats(beats, onsets)
+    assert shifted[0] - beats[0] == pytest.approx(0.5 / 8)
+
+
+def test_align_beats_ignores_onsets_outside_quarter_window() -> None:
+    beats = [0.5 * i for i in range(10)]
+    near = [0.5 * i - 0.02 for i in range(1, 5)]
+    far = [0.5 * i + 0.25 for i in range(1, 8)]  # off-beat notes, beyond +-1/4
+    shifted = align_beats(beats, near + far)
+    assert shifted[0] - beats[0] == pytest.approx(-0.02)
+
+
+def test_riff_beats_land_on_true_grid() -> None:
+    clip, notes, truth = _riff()
+    info = analyze(clip, notes, None, T44)
+    interval = 60.0 / truth["tempo_bpm"]
+    b = np.asarray(info.beat_times_s)
+    err = np.abs(b - np.round(b / interval) * interval)
+    print("riff mean beat error ms", err.mean() * 1000)
+    assert err.mean() < 0.010
+
+
+def test_downbeat_prefers_accented_single_note_over_weak_beat_chord() -> None:
+    # Beats every 0.5 s. Accented single notes on beats 0, 4, 8; 3-note chords on beats 2, 6.
+    beats = [0.5 * i for i in range(12)]
+    notes: list[NoteEvent] = []
+    for b in (0, 4, 8):
+        notes.append(NoteEvent(b * 0.5, b * 0.5 + 0.4, 52, 1.0))
+    for b in (2, 6):
+        notes += [NoteEvent(b * 0.5, b * 0.5 + 0.4, p, 0.6) for p in (48, 55, 64)]
+    assert _pick_downbeat(beats, notes, 4) == 0

@@ -23,6 +23,7 @@ MAX_TEMPO = 200.0
 SLOTS_PER_BEAT = 4
 PICKUP_TOLERANCE = 0.5  # slots
 DOWNBEAT_WINDOW = 1.0  # slots, B8
+MIN_LAG_SAMPLES = 4  # B7a
 _EPS = 1e-9
 
 
@@ -58,6 +59,26 @@ def _even_beats(start_s: float, tempo: float, duration_s: float) -> list[float]:
     return [start_s + i * interval for i in range(count)]
 
 
+def align_beats(beat_times: Sequence[float], onsets: Sequence[float]) -> tuple[float, ...]:
+    """Remove the constant onset-envelope latency of the tracked beats (B7a).
+
+    Offsets onset - nearest beat are taken for onsets within 1/4 median interval of a beat.
+    With at least 4 of them, all beats shift by their median, clamped to +-1/8 interval.
+    """
+    beats = np.asarray(beat_times, dtype=np.float64)
+    if beats.size < 2 or len(onsets) == 0:
+        return tuple(float(b) for b in beats)
+    interval = float(np.median(np.diff(beats)))
+    on = np.asarray(onsets, dtype=np.float64)
+    offsets = on - beats[np.abs(on[:, None] - beats[None, :]).argmin(axis=1)]
+    near = offsets[np.abs(offsets) <= interval / 4 + _EPS]
+    if near.size < MIN_LAG_SAMPLES:
+        return tuple(float(b) for b in beats)
+    limit = interval / 8
+    shift = float(np.clip(np.median(near), -limit, limit))
+    return tuple(float(b) + shift for b in beats)
+
+
 def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], numerator: int) -> int:
     if not notes:
         return 0
@@ -68,7 +89,11 @@ def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], numerator
         total = 0.0
         for idx in range(d, len(beats), numerator):
             centre = SLOTS_PER_BEAT * idx
-            total += sum(v for p, v in positions if abs(p - centre) <= DOWNBEAT_WINDOW + _EPS)
+            # Max, not sum: a chord on a weak beat must not outweigh an accented single note.
+            total += max(
+                (v for p, v in positions if abs(p - centre) <= DOWNBEAT_WINDOW + _EPS),
+                default=0.0,
+            )
         scores[d] = total
     best = max(scores.values())
     tied = [d for d, s in scores.items() if s >= best - _EPS]
@@ -98,6 +123,9 @@ def analyze(
     if len(beats) < 2:
         first = min((n.onset_s for n in notes), default=0.0)
         beats = _even_beats(first, tempo or DEFAULT_TEMPO, clip.duration_s)
+    # applied to the fallback grid too: it is anchored on the first onset, so the median
+    # offset is ~0 and the shift is harmless
+    beats = list(align_beats(beats, [n.onset_s for n in notes]))
 
     if tempo is not None:
         return RhythmInfo(
