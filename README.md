@@ -8,6 +8,7 @@ bai.mp3  ──►  lamnhac convert  ──►  bai.gp5  +  bai.musicxml
 
 Kết quả là **bản nháp** để bạn mở trong Guitar Pro 8 rồi sửa tiếp, không phải bản chép hoàn chỉnh. Công cụ chạy tốt nhất với bản thu chỉ có một cây guitar, tiếng clean hoặc acoustic.
 
+- 📖 Trang tài liệu: https://nguyenhuuca.github.io/lamnhac/
 - Cách các bước bên trong hoạt động: [docs/algorithms.md](docs/algorithms.md)
 - Yêu cầu sản phẩm: [docs/prd/PRD-mp3-to-guitarpro.md](docs/prd/PRD-mp3-to-guitarpro.md)
 - Đặc tả kỹ thuật: [docs/specs/spec-mp3-to-guitarpro.md](docs/specs/spec-mp3-to-guitarpro.md)
