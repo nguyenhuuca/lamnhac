@@ -18,7 +18,8 @@ The installer fills the sections below from the stack packs it detected (`npx gi
 | Audio decode, tempo, beats | librosa |
 | Guitar Pro export | PyGuitarPro 0.11 (`.gp5`; ADR-0001) |
 | MusicXML export | music21 10.x (ADR-0001) |
-| Tests | pytest; mir_eval for Note F1 |
+| Tests | pytest; hypothesis for property tests; mir_eval for Note F1 |
+| Manual check target | Guitar Pro 8 |
 | Lint, format, types | Ruff (lint + format), mypy `--strict` |
 | Database | None |
 | Deployment | None: runs locally with `uv run` |

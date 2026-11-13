@@ -1,6 +1,6 @@
 # Plan: MP3 → Guitar Pro CLI
 
-**Status:** Draft · **Date:** 2026-11-13 · **Inputs:** [PRD](../prd/PRD-mp3-to-guitarpro.md), [spec rev 2](../specs/spec-mp3-to-guitarpro.md), [sequence](../sequence/sequence-mp3-to-guitarpro.md), [ADR-0001](../adr/0001-transcription-and-export-libraries.md)
+**Status:** In progress · **Date:** 2026-11-13 · **Inputs:** [PRD](../prd/PRD-mp3-to-guitarpro.md), [spec rev 2](../specs/spec-mp3-to-guitarpro.md), [sequence](../sequence/sequence-mp3-to-guitarpro.md), [ADR-0001](../adr/0001-transcription-and-export-libraries.md)
 
 ## Goal
 
@@ -54,4 +54,4 @@
   - sau T8: mở `.musicxml` mẫu trong Guitar Pro;
   - sau T10: mở `.gp5` mẫu;
   - sau T11: thử với 2–3 bản thu thật của chính bạn.
-- **Còn mở:** owner dùng Guitar Pro phiên bản nào (6, 7 hay 8)? Cần biết trước khi kiểm thủ công.
+- **Môi trường kiểm thủ công:** Guitar Pro 8 (owner xác nhận 2026-11-13).

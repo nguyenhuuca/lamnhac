@@ -64,7 +64,7 @@ Bằng chứng: nhu cầu của chính owner (người dùng đầu tiên). Repo
 
 ## Open Questions
 
-- Owner dùng Guitar Pro phiên bản nào (6/7/8) để làm môi trường kiểm thử R6/R7? (owner)
+- ~~Owner dùng Guitar Pro phiên bản nào?~~ Guitar Pro 8 (trả lời 2026-11-13).
 - Bản thu chủ yếu là acoustic, electric clean hay electric distortion? (owner)
 - Có sẵn vài bản thu kèm tab đúng để làm bộ test cho G1 không, hay dùng dataset công khai (GuitarSet)? (owner)
 - Ngoài MP3 có cần nhận WAV/FLAC không? Gần như không tốn thêm công. (owner)
