@@ -7,9 +7,22 @@ import librosa
 import numpy as np
 import numpy.typing as npt
 
+from lamnhac.chord_shapes import shape
 from lamnhac.errors import ProcessingError
-from lamnhac.models import NO_CHORD, AudioClip, ChordLabel, MusicKey, RhythmInfo
-from lamnhac.rhythm import time_of_slot
+from lamnhac.models import (
+    NO_CHORD,
+    STANDARD_TUNING,
+    AudioClip,
+    ChordDiagram,
+    ChordLabel,
+    MusicKey,
+    RhythmInfo,
+    TabNote,
+    TabScore,
+    TabSlot,
+)
+from lamnhac.names import chord_name, chord_sharp
+from lamnhac.rhythm import PICKUP_TOLERANCE, time_of_slot
 
 log = logging.getLogger("lamnhac")
 
@@ -192,3 +205,100 @@ def detect_key(labels: Sequence[ChordLabel]) -> MusicKey:
             if r > best_r + 1e-12:
                 best, best_r = MusicKey(tonic, minor), r
     return best
+
+
+MIN_CHANGES_FOR_BAR_SEARCH = 4
+BAR_SCORE_MARGIN = 1.2
+
+
+def changes(labels: Sequence[ChordLabel]) -> list[int]:
+    """Unit indices where a chord starts: not N and different from the previous unit (C11)."""
+    return [
+        j
+        for j, label in enumerate(labels)
+        if label != NO_CHORD and (j == 0 or label != labels[j - 1])
+    ]
+
+
+def _chord_downbeat(
+    labels: Sequence[ChordLabel], rhythm: RhythmInfo, unit_slots: int, bar_slots: int
+) -> int:
+    change_units = changes(labels)
+    if len(change_units) < MIN_CHANGES_FOR_BAR_SEARCH:
+        return rhythm.downbeat_slot
+    step = 4 if bar_slots % 4 == 0 else 2
+    scores = sorted(
+        (
+            (sum(1 for j in change_units if (j * unit_slots) % bar_slots == o), -o, o)
+            for o in range(0, bar_slots, step)
+        ),
+        reverse=True,
+    )
+    best = scores[0][0]
+    second = scores[1][0] if len(scores) > 1 else 0
+    if best >= MIN_CHANGES_FOR_BAR_SEARCH and best >= BAR_SCORE_MARGIN * second:
+        return scores[0][2]
+    return rhythm.downbeat_slot
+
+
+def bar_start(
+    labels: Sequence[ChordLabel], rhythm: RhythmInfo, unit_slots: int, pickup_given: bool
+) -> tuple[int, int]:
+    """Grid slot where bar 1 starts and the count of leading N units dropped (C11)."""
+    bar_slots = rhythm.time_signature.bar_slots
+    if pickup_given:
+        bar1 = rhythm.downbeat_slot
+    else:
+        bar1 = _chord_downbeat(labels, rhythm, unit_slots, bar_slots)
+    first = next((j for j, label in enumerate(labels) if label != NO_CHORD), None)
+    if first is None:
+        return bar1, 0
+    first_slot = first * unit_slots
+    while bar1 > first_slot + PICKUP_TOLERANCE:
+        bar1 -= bar_slots
+    # Unlike quantize, skip whole bars of N before the first chord (a drum or spoken intro):
+    # a chord chart has nothing to show there.
+    while bar1 + bar_slots <= first_slot + PICKUP_TOLERANCE:
+        bar1 += bar_slots
+    dropped = sum(1 for j in range(first) if j * unit_slots < bar1)
+    return bar1, dropped
+
+
+def build_tab(
+    labels: Sequence[ChordLabel],
+    key: MusicKey,
+    unit_slots: int,
+    bar1_slot: int,
+    rhythm: RhythmInfo,
+    capo: int,
+    title: str,
+) -> tuple[TabScore, dict[int, ChordDiagram], int]:
+    """Tab with one slot per strum unit, chord diagrams at changes and the change count (C16)."""
+    bar_slots = rhythm.time_signature.bar_slots
+    change_set = set(changes(labels))
+    slots: list[TabSlot] = []
+    diagrams: dict[int, ChordDiagram] = {}
+    change_count = 0
+    for j, label in enumerate(labels):
+        if j * unit_slots < bar1_slot:
+            continue
+        start = j * unit_slots - bar1_slot
+        if label.root is None:
+            slots.append(TabSlot(start, unit_slots))
+            continue
+        chord_shape = shape((label.root - capo) % 12, label.minor)
+        notes = tuple(
+            TabNote(STANDARD_TUNING.strings[5 - i] + fret + capo, 6 - i, fret + capo)
+            for i, fret in enumerate(chord_shape.frets)
+            if fret != -1
+        )
+        slots.append(TabSlot(start, unit_slots, notes))
+        if j in change_set:
+            change_count += 1
+            diagrams[start] = ChordDiagram(
+                chord_name(label, key, capo), label, chord_shape, chord_sharp(label, key, capo)
+            )
+    total = sum(s.length for s in slots)
+    if total % bar_slots:
+        slots.append(TabSlot(total, bar_slots - total % bar_slots))
+    return TabScore(rhythm, STANDARD_TUNING, tuple(slots), title), diagrams, change_count

@@ -6,6 +6,9 @@ import numpy.typing as npt
 import pytest
 
 from lamnhac.chords import (
+    bar_start,
+    build_tab,
+    changes,
     chroma_per_unit,
     detect_key,
     label_probabilities,
@@ -156,3 +159,93 @@ EM = ChordLabel(4, True)
 )
 def test_detect_key(labels: list[ChordLabel], expected: MusicKey) -> None:
     assert detect_key(labels) == expected
+
+
+def _rhythm_ts(num: int, den: int, downbeat: int = 0) -> RhythmInfo:
+    beats = tuple(i * 0.5 for i in range(200))
+    return RhythmInfo(120.0, beats, downbeat, TimeSignature(num, den), "detected")
+
+
+def _beat2_labels() -> list[ChordLabel]:
+    # 4 units per bar; the chord changes at unit 1 of every bar
+    labels: list[ChordLabel] = []
+    for i in range(8):
+        labels += [G if i % 2 else C] * 4
+    return [C, *labels[:-1]]
+
+
+def test_changes_counts_chord_after_n() -> None:
+    assert changes([NO_CHORD, C, C, NO_CHORD, C, G, G]) == [1, 4, 5]
+
+
+def test_bar_start_picks_beat_two() -> None:
+    bar1, dropped = bar_start(_beat2_labels(), _rhythm_ts(4, 4), 4, False)
+    assert bar1 % 16 == 4
+    assert dropped == 0
+
+
+def test_bar_start_close_scores_fall_back() -> None:
+    labels: list[ChordLabel] = []
+    for _ in range(8):
+        labels += [C, C, G, G]
+    labels[5] = AM  # extra change: offsets 0 and 8 score 8 and 9
+    assert bar_start(labels, _rhythm_ts(4, 4, 4), 4, False)[0] % 16 == 4
+
+
+def test_bar_start_few_changes_fall_back() -> None:
+    labels = [C] * 4 + [G] * 4 + [AM] * 4
+    assert bar_start(labels, _rhythm_ts(4, 4, 8), 4, False)[0] % 16 == 8
+
+
+def test_bar_start_pickup_given_uses_downbeat() -> None:
+    assert bar_start(_beat2_labels(), _rhythm_ts(4, 4, 8), 4, True)[0] % 16 == 8
+
+
+def test_bar_start_drops_leading_n() -> None:
+    labels = [NO_CHORD] * 2 + [C] * 4 + [G] * 4
+    bar1, dropped = bar_start(labels, _rhythm_ts(4, 4, 8), 4, True)
+    assert bar1 == 8
+    assert dropped == 2
+
+
+@pytest.mark.parametrize(("num", "den", "unit"), [(4, 4, 4), (6, 8, 2), (2, 2, 8)])
+def test_build_tab_slot_lengths(num: int, den: int, unit: int) -> None:
+    rhythm = _rhythm_ts(num, den)
+    labels = [C, C, NO_CHORD, G, G]
+    tab, diagrams, count = build_tab(labels, MusicKey(0, False), unit, 0, rhythm, 0, "t")
+    assert all(s.length == unit for s in tab.slots[:5])
+    assert sum(s.length for s in tab.slots) % rhythm.time_signature.bar_slots == 0
+    assert tab.slots[2].notes == ()
+    assert sorted(diagrams) == [0, 3 * unit]
+    assert count == 2
+
+
+def test_build_tab_skips_units_before_bar1() -> None:
+    tab, _, _ = build_tab([NO_CHORD, C, G], MusicKey(0, False), 4, 4, _rhythm_ts(4, 4), 0, "t")
+    assert tab.slots[0].start == 0
+    assert tab.slots[0].notes != ()
+
+
+def test_build_tab_open_c_notes() -> None:
+    tab, diagrams, _ = build_tab([C], MusicKey(0, False), 4, 0, _rhythm_ts(4, 4), 0, "t")
+    frets = {(n.string, n.fret) for n in tab.slots[0].notes}
+    assert frets == {(5, 3), (4, 2), (3, 0), (2, 1), (1, 0)}
+    assert diagrams[0].name == "C"
+
+
+def test_build_tab_capo_shifts_frets() -> None:
+    eb = ChordLabel(3, False)
+    tab, diagrams, _ = build_tab([eb], MusicKey(3, False), 4, 0, _rhythm_ts(4, 4), 3, "t")
+    frets = {(n.string, n.fret) for n in tab.slots[0].notes}
+    assert frets == {(5, 6), (4, 5), (3, 3), (2, 4), (1, 3)}
+    assert diagrams[0].name == "C"
+
+
+def test_bar_start_skips_whole_bars_of_leading_no_chord() -> None:
+    # 4/4, unit 4: 10 N units (2.5 bars) then C on every beat; downbeat 0, no pickup search hit.
+    beats = tuple(i * 0.5 for i in range(80))
+    rhythm = RhythmInfo(120.0, beats, 0, TimeSignature(4, 4), "user")
+    labels = [NO_CHORD] * 10 + [ChordLabel(0, False)] * 22
+    bar1, dropped = bar_start(labels, rhythm, 4, pickup_given=True)
+    assert bar1 == 32  # the bar containing unit 10 (slot 40) starts at slot 32
+    assert dropped == 8

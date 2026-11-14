@@ -135,6 +135,7 @@ Các hằng số `BASS_WEIGHT`, `N_SCORE`, `TEMPERATURE`, `P_STAY` là điểm k
   - `bar1_slot` tính đúng như `rhythm.quantize`:
     - bắt đầu từ `downbeat_slot`;
     - lùi từng `bar_slots` cho tới khi `bar1_slot ≤ slot của đơn vị có hợp âm đầu tiên + 0.5`. Đây là ô pickup.
+  - Sau đó, khác với `quantize`, tiến `bar1_slot` thêm từng `bar_slots` khi cả ô vẫn nằm trước hợp âm đầu tiên, tức bỏ các ô toàn N của đoạn intro chỉ có trống hoặc lời nói. *(Thêm khi build C-T5.)*
   - Các đơn vị N đứng trước `bar1_slot` bị bỏ, kèm cảnh báo ở C4.
 
 **Giọng và tên hợp âm (R4)**
