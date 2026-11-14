@@ -9,10 +9,19 @@ import guitarpro
 import music21
 import pytest
 
-from lamnhac import pipeline, tab, transcribe
+from lamnhac import chords, pipeline, tab, transcribe
 from lamnhac.cli import main
 from lamnhac.errors import InputError, OutputError, ProcessingError
-from lamnhac.models import ConvertOptions, ConvertResult, TabScore, TimeSignature, Tuning
+from lamnhac.models import (
+    NO_CHORD,
+    ChordLabel,
+    ChordsOptions,
+    ConvertOptions,
+    ConvertResult,
+    TabScore,
+    TimeSignature,
+    Tuning,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SCALE = FIXTURES / "scale_c.mp3"
@@ -272,3 +281,96 @@ def test_bad_sensitivity_exit_two(tmp_path: Path) -> None:
 )
 def test_bad_pickup_exit_two(extra: list[str], tmp_path: Path) -> None:
     assert main(["convert", str(SCALE), "-o", str(tmp_path), *extra]) == 2
+
+
+# --- chords (C-T7) ---
+
+
+def _stub_recognize(monkeypatch: pytest.MonkeyPatch) -> None:
+    labels = (NO_CHORD, *(ChordLabel(r, False) for r in (0, 0, 7, 7, 9, 9, 5, 5)))
+    monkeypatch.setattr(chords, "recognize", lambda *_a: labels)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [["--capo", "12"], ["--capo", "-1"], ["--format", "musicxml"], ["--format", ""]],
+)
+def test_chords_invalid_arguments_exit_two(
+    extra: list[str], capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    assert main(["chords", str(SCALE), "-o", str(tmp_path), *extra]) == 2
+    assert "Traceback" not in capsys.readouterr().err
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("case", ["missing", "wrong_suffix"])
+def test_chords_bad_input_exit_three(
+    case: str, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    bad = tmp_path / {"missing": "nope.mp3", "wrong_suffix": "a.wav"}[case]
+    if case == "wrong_suffix":
+        bad.write_bytes(b"RIFF")
+    assert main(["chords", str(bad), "-o", str(tmp_path / "out")]) == 3
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "lỗi:" in captured.err
+
+
+def test_chords_processing_error_exit_four(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    def boom(*_a: Any) -> Any:
+        raise ProcessingError("không nhận ra hợp âm")
+
+    monkeypatch.setattr(chords, "recognize", boom)
+    assert main(["chords", str(SCALE), "-o", str(tmp_path), "--tempo", "120"]) == 4
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "không nhận ra hợp âm" in captured.err
+
+
+def test_chords_existing_output_exit_five(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    _stub_recognize(monkeypatch)
+    (tmp_path / "scale_c.chords.gp5").write_text("old")
+    assert main(["chords", str(SCALE), "-o", str(tmp_path)]) == 5
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "[1/4]" not in captured.err
+
+
+def test_chords_stdout_paths_and_summary(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    _stub_recognize(monkeypatch)
+    argv = ["chords", str(SCALE), "-o", str(tmp_path), "--tempo", "96", "--format", "gp5,txt"]
+    assert main(argv) == 0
+    captured = capsys.readouterr()
+    assert captured.out.splitlines() == [
+        str(tmp_path / "scale_c.chords.gp5"),
+        str(tmp_path / "scale_c.chords.txt"),
+    ]
+    summary = next(ln for ln in captured.err.splitlines() if ln.startswith("xong:"))
+    assert "lần đổi hợp âm" in summary
+    assert "giọng" in summary
+    assert "tempo 96 BPM (user)" in summary
+    assert "# giọng:" in captured.err  # chart text follows the summary
+
+
+def test_chords_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[ChordsOptions] = []
+
+    def fake(opts: ChordsOptions, _progress: Any) -> Any:
+        seen.append(opts)
+        raise ProcessingError("stop")
+
+    monkeypatch.setattr(pipeline, "chords", fake)
+    assert main(["chords", str(SCALE)]) == 4
+    opts = seen[0]
+    assert opts.formats == frozenset({"gp5"})
+    assert opts.capo == 0
+    assert opts.pickup_slots is None
+    assert opts.tempo is None
+    assert opts.force is False
+    assert opts.out_dir == SCALE.resolve().parent

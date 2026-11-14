@@ -1,5 +1,7 @@
 import json
 import socket
+import subprocess
+import sys
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -7,9 +9,19 @@ from typing import Any
 
 import pytest
 
-from lamnhac import audio, pipeline, transcribe
+from lamnhac import audio, chords, export_gp5, pipeline, transcribe
 from lamnhac.errors import OutputError
-from lamnhac.models import STANDARD_TUNING, ConvertOptions, Format, TabScore, TimeSignature
+from lamnhac.models import (
+    NO_CHORD,
+    STANDARD_TUNING,
+    ChordFormat,
+    ChordLabel,
+    ChordsOptions,
+    ConvertOptions,
+    Format,
+    TabScore,
+    TimeSignature,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SCALE = FIXTURES / "scale_c.mp3"
@@ -130,3 +142,103 @@ def test_transcribe_warnings_merged_and_options_forwarded(
     result = pipeline.convert(filtered, lambda _m: None)
     assert "bỏ 1 nốt hoạ âm" in result.warnings
     assert result.note_count == len(truth["notes"])
+
+
+# --- chords (C-T7) ---
+
+_N = NO_CHORD
+_LABELS = (_N,) * 6 + tuple(
+    ChordLabel(r, m) for r, m in ((0, False), (7, False), (9, True), (5, False)) for _ in "ab"
+)
+
+
+def _chord_opts(
+    out_dir: Path,
+    formats: frozenset[ChordFormat] = frozenset({"gp5", "txt"}),
+    force: bool = False,
+) -> ChordsOptions:
+    return ChordsOptions(SCALE, out_dir, formats, 120.0, TimeSignature(4, 4), 0, 0, force)
+
+
+def _stub_recognize(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    calls: list[int] = []
+
+    def fake(_clip: Any, _rhythm: Any, unit_slots: int) -> tuple[ChordLabel, ...]:
+        calls.append(unit_slots)
+        return _LABELS
+
+    monkeypatch.setattr(chords, "recognize", fake)
+    return calls
+
+
+def test_chords_writes_outputs_and_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _stub_recognize(monkeypatch)
+    lines: list[str] = []
+    result = pipeline.chords(_chord_opts(tmp_path / "o"), lines.append)
+    assert calls == [4]
+    assert result.outputs == (
+        tmp_path / "o" / "scale_c.chords.gp5",
+        tmp_path / "o" / "scale_c.chords.txt",
+    )
+    assert all(p.stat().st_size > 0 for p in result.outputs)
+    assert result.errors == ()
+    assert result.change_count == 4
+    assert result.chart.labels == _LABELS
+    assert result.chart.unit_slots == 4
+    assert result.warnings == ("bỏ 4 phách không có hợp âm ở đầu bài",)
+    steps = [ln for ln in lines if ln.startswith("[")]
+    assert [s[:5] for s in steps] == [f"[{k}/4]" for k in range(1, 5)]
+
+
+def test_chords_detected_tempo_hint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_recognize(monkeypatch)
+    lines: list[str] = []
+    opts = replace(_chord_opts(tmp_path), tempo=None)
+    pipeline.chords(opts, lines.append)
+    assert any("tempo đoán được" in ln for ln in lines)
+
+
+def test_chords_existing_output_fails_before_processing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _stub_recognize(monkeypatch)
+    (tmp_path / "scale_c.chords.txt").write_text("old")
+    lines: list[str] = []
+    with pytest.raises(OutputError):
+        pipeline.chords(_chord_opts(tmp_path), lines.append)
+    assert calls == []
+    assert lines == []
+    pipeline.chords(_chord_opts(tmp_path, force=True), lambda _m: None)
+    assert (tmp_path / "scale_c.chords.txt").read_text(encoding="utf-8") != "old"
+
+
+def test_chords_format_filter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_recognize(monkeypatch)
+    result = pipeline.chords(_chord_opts(tmp_path, frozenset({"txt"})), lambda _m: None)
+    assert result.outputs == (tmp_path / "scale_c.chords.txt",)
+
+
+def test_chords_one_writer_failing_keeps_the_other(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stub_recognize(monkeypatch)
+
+    def fail(*_a: Any, **_k: Any) -> None:
+        raise OutputError("disk full")
+
+    monkeypatch.setattr(export_gp5, "write", fail)
+    result = pipeline.chords(_chord_opts(tmp_path), lambda _m: None)
+    assert result.outputs == (tmp_path / "scale_c.chords.txt",)
+    assert len(result.errors) == 1
+    assert "gp5" in result.errors[0]
+    assert "disk full" in result.errors[0]
+
+
+def test_chords_path_never_imports_transcription_stack() -> None:
+    code = (
+        "import sys, lamnhac.pipeline, lamnhac.chords, lamnhac.cli\n"
+        "bad = [m for m in ('basic_pitch', 'tensorflow') if m in sys.modules]\n"
+        "sys.exit(1 if bad else 0)"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
+    assert proc.returncode == 0, proc.stderr
