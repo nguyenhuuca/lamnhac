@@ -109,7 +109,7 @@ Mọi dataclass đều `frozen=True` trong `models.py`.
      - `idx` = khung của từng biên đơn vị, chặn trong `[0, số khung]`;
      - `librosa.util.sync(chroma, idx, aggregate=np.median, pad=True)`;
      - bỏ cột 0 (phần trước biên đầu tiên), để cột j ứng với đơn vị j;
-     - đơn vị không có khung nào (rỗng sau khi chặn) bị bỏ ở cuối bài.
+     - đơn vị không có khung nào (rỗng sau khi chặn) giữ cột 0 và được đánh dấu im lặng (thành N), để số cột luôn bằng số đơn vị. `util.sync` bỏ chỉ số trùng, nên chỉ đồng bộ các đơn vị có khung. *(Chỉnh khi build C-T3.)*
   8. Chuẩn hoá L2 từng cột. Cột có chuẩn 0 được đánh dấu im lặng.
   9. Đơn vị có RMS của `y` dưới −45 dBFS cũng được đánh dấu im lặng.
 - **C9. Điểm cho từng nhãn.** Mỗi hợp âm có mẫu nhị phân 12 chiều: trưởng = {0, 4, 7}, thứ = {0, 3, 7}, xoay theo nốt gốc. Mẫu được chuẩn hoá L2, sau đó lấy cosine với chroma của đơn vị.
@@ -222,7 +222,7 @@ Các hằng số `BASS_WEIGHT`, `N_SCORE`, `TEMPERATURE`, `P_STAY` là điểm k
 | Unit | `chord_shapes`: 24 thế bấm cho đúng 3 pitch class, độ trải ≤ 4, thế mở đúng bảng, `first_fret` của G là 1 | C15 |
 | Unit | `chords.name`: thăng/giáng theo giọng; Bb trong C trưởng; capo hạ N nửa cung và đặt tên theo giọng đã hạ; `key_name` tiếng Việt | C13, C13a, C14 |
 | Unit | `detect_key`: C–G–Am–F → Đô trưởng; Am–Dm–E–Am → La thứ | C12 |
-| Unit | Điểm và Viterbi trên chroma tổng hợp: chuỗi biết trước (có nhiễu) → đúng nhãn; một đơn vị lạ giữa 8 đơn vị C vẫn ra C; đơn vị im lặng hoặc chuẩn 0 → N | C9, C10 |
+| Unit | Điểm và Viterbi trên chroma tổng hợp: chuỗi biết trước (có nhiễu) → đúng nhãn; một đơn vị **nhiễu** (lẫn C và G) giữa 8 đơn vị C vẫn ra C. Một đơn vị G sạch thì **được giữ**, vì đó có thể là hợp âm thật dài một phách; R3 chỉ cấm hợp âm ngắn hơn một đơn vị *(làm rõ khi build C-T3)*; đơn vị im lặng hoặc chuẩn 0 → N | C9, C10 |
 | Unit | Chroma: tín hiệu tổng hợp lệch +30 cent vẫn ra đúng hợp âm (`estimate_tuning` với 36 bin) | C8 |
 | Unit | Gộp theo đơn vị: số cột bằng số đơn vị; biên vượt quá cuối bài được chặn; 6/8 có đơn vị 2 slot | C7, C8 |
 | Unit | `bar_start`: đổi ở phách 2 mỗi ô (4/4, 8 ô) → `bar1_slot` ở phách 2; hai hợp âm mỗi ô với điểm sát nhau → giữ B8; có `pickup` → giữ B8a; N ở đầu bị bỏ kèm cảnh báo | C11 |
