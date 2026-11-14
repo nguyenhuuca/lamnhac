@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 
 import numpy as np
 import numpy.typing as npt
@@ -40,6 +40,28 @@ class NoteEvent:
             raise ValueError("offset_s must be greater than onset_s")
         if not 0 <= self.pitch <= 127:
             raise ValueError("pitch must be in 0..127")
+        if not 0.0 <= self.velocity <= 1.0:
+            raise ValueError("velocity must be in 0..1")
+
+
+class OnsetLike(Protocol):
+    """Anything with an onset time and a strength: NoteEvent, Onset."""
+
+    @property
+    def onset_s(self) -> float: ...
+
+    @property
+    def velocity(self) -> float: ...
+
+
+@dataclass(frozen=True)
+class Onset:
+    onset_s: float
+    velocity: float
+
+    def __post_init__(self) -> None:
+        if self.onset_s < 0:
+            raise ValueError("onset_s must be >= 0")
         if not 0.0 <= self.velocity <= 1.0:
             raise ValueError("velocity must be in 0..1")
 

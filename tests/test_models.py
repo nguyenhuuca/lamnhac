@@ -15,6 +15,7 @@ from lamnhac.models import (
     STANDARD_TUNING,
     AudioClip,
     NoteEvent,
+    Onset,
     RhythmInfo,
     Score,
     Slot,
@@ -127,3 +128,18 @@ def test_exit_codes() -> None:
         5,
     ]
     assert issubclass(OutputError, LamnhacError)
+
+
+def test_onset_valid() -> None:
+    o = Onset(0.0, 1.0)
+    assert (o.onset_s, o.velocity) == (0.0, 1.0)
+
+
+def test_onset_negative_time_raises() -> None:
+    with pytest.raises(ValueError):
+        Onset(-0.1, 0.5)
+
+
+def test_onset_velocity_above_one_raises() -> None:
+    with pytest.raises(ValueError):
+        Onset(0.5, 1.1)

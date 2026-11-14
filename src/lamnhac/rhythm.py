@@ -12,6 +12,7 @@ from lamnhac.models import (
     AudioClip,
     GridNote,
     NoteEvent,
+    OnsetLike,
     RhythmInfo,
     Score,
     Slot,
@@ -121,7 +122,7 @@ def align_beats_locally(beat_times: Sequence[float], onsets: Sequence[float]) ->
     return tuple(float(b) for b in out)
 
 
-def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots: int) -> int:
+def _pick_downbeat(beats: Sequence[float], notes: Sequence[OnsetLike], bar_slots: int) -> int:
     """Return the downbeat as a slot offset in [0, bar_slots) (B8)."""
     if not notes:
         return 0
@@ -153,7 +154,7 @@ def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots
 
 
 def _downbeat_from_pickup(
-    beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots: int, pickup_slots: int
+    beats: Sequence[float], notes: Sequence[OnsetLike], bar_slots: int, pickup_slots: int
 ) -> int:
     """Downbeat slot when the user says how far before bar 1 the first note is (B8a).
 
@@ -171,7 +172,7 @@ def _downbeat_from_pickup(
 
 def analyze(
     clip: AudioClip,
-    notes: Sequence[NoteEvent],
+    notes: Sequence[OnsetLike],
     tempo: float | None,
     time_sig: TimeSignature,
     pickup_slots: int | None = None,

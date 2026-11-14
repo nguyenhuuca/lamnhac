@@ -13,6 +13,7 @@ from lamnhac.models import (
     SAMPLE_RATE,
     AudioClip,
     NoteEvent,
+    Onset,
     RhythmInfo,
     Slot,
     TimeSignature,
@@ -456,3 +457,11 @@ def test_local_align_clamps_and_stays_increasing() -> None:
     out = align_beats_locally(beats, onsets)
     assert all(abs(o - b - 0.12) < 1e-9 for o, b in zip(out, beats, strict=True))
     assert all(b > a for a, b in pairwise(out))
+
+
+def test_analyze_accepts_onset_objects() -> None:
+    clip = _clicks(120.0, 6.0)
+    times = [0.5 * i for i in range(10)]
+    events = [_note(t, t + 0.2) for t in times]
+    onsets = [Onset(t, 0.8) for t in times]
+    assert analyze(clip, onsets, None, T44) == analyze(clip, events, None, T44)
