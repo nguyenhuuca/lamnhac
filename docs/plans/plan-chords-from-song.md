@@ -1,6 +1,6 @@
 # Plan: Vòng hợp âm từ bài hát → Guitar Pro
 
-**Status:** Draft · **Date:** 2026-11-14 · **Inputs:** [PRD](../prd/PRD-chords-from-song.md), [spec rev 3](../specs/spec-chords-from-song.md), [sequence](../sequence/sequence-chords-from-song.md), [ADR-0001](../adr/0001-transcription-and-export-libraries.md)
+**Status:** In progress (approved by owner via /swarm-execute, 2026-11-14) · **Date:** 2026-11-14 · **Inputs:** [PRD](../prd/PRD-chords-from-song.md), [spec rev 3](../specs/spec-chords-from-song.md), [sequence](../sequence/sequence-chords-from-song.md), [ADR-0001](../adr/0001-transcription-and-export-libraries.md)
 
 ## Goal
 
