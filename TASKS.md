@@ -29,7 +29,7 @@
 - [x] C-T5 Bar start from chord changes + tab building (fc7bfa8)
 - [x] C-T6 `.gp5` diagrams + key, `.chords.txt` (6279ed6, b6454d6)
 - [x] C-T7 `pipeline.chords` + CLI subcommand (c72714f)
-- [x] C-T8 Synthetic chord fixture + integration test
+- [x] C-T8 Synthetic chord fixture + integration test (678e7af)
 - [x] C-T9 Answer parser + metrics (`tests/eval/answers.py`) (12c0d79)
 - [x] C-T10 Chord eval (`pytest -m eval`) (1d3b097)
 - [x] C-T11 Docs (README, guide, algorithms) (1e4889d)
