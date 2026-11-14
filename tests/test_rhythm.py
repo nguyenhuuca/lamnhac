@@ -26,7 +26,9 @@ from lamnhac.rhythm import (
     align_beats_locally,
     analyze,
     grid_position,
+    onsets,
     quantize,
+    time_of_slot,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -465,3 +467,21 @@ def test_analyze_accepts_onset_objects() -> None:
     events = [_note(t, t + 0.2) for t in times]
     onsets = [Onset(t, 0.8) for t in times]
     assert analyze(clip, onsets, None, T44) == analyze(clip, events, None, T44)
+
+
+def test_onsets_on_clicks_are_half_a_second_apart() -> None:
+    found = onsets(_clicks(120, 4))
+    assert len(found) >= 4
+    diffs = [b.onset_s - a.onset_s for a, b in pairwise(found)]
+    assert abs(float(np.median(diffs)) - 0.5) < 0.02
+    assert all(0.0 <= o.velocity <= 1.0 for o in found)
+
+
+def test_onsets_on_silence_is_empty() -> None:
+    assert onsets(_clip(np.zeros(SAMPLE_RATE * 2), 2.0)) == []
+
+
+def test_time_of_slot_inverts_grid_position() -> None:
+    beats = [1.0, 1.4, 2.0, 2.3, 3.1]
+    for t in [0.2, 1.0, 1.2, 1.9, 2.3, 3.0, 3.1, 4.0]:
+        assert time_of_slot(grid_position(t, beats), beats) == pytest.approx(t)

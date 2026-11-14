@@ -12,6 +12,7 @@ from lamnhac.models import (
     AudioClip,
     GridNote,
     NoteEvent,
+    Onset,
     OnsetLike,
     RhythmInfo,
     Score,
@@ -47,6 +48,38 @@ def grid_position(t: float, beat_times: Sequence[float]) -> float:
     i = int(np.searchsorted(beats, t, side="right")) - 1
     frac = (t - float(beats[i])) / float(beats[i + 1] - beats[i])
     return SLOTS_PER_BEAT * (i + frac)
+
+
+def time_of_slot(p: float, beat_times: Sequence[float]) -> float:
+    """Inverse of `grid_position`: slot position `p` to time (s)."""
+    beats = np.asarray(beat_times, dtype=np.float64)
+    if beats.size < 2:
+        raise ValueError("need at least 2 beats")
+    median = float(np.median(np.diff(beats)))
+    last = beats.size - 1
+    if p < 0:
+        return float(beats[0]) + p * median / SLOTS_PER_BEAT
+    if p >= SLOTS_PER_BEAT * last:
+        return float(beats[-1]) + (p / SLOTS_PER_BEAT - last) * median
+    i = int(p // SLOTS_PER_BEAT)
+    frac = p / SLOTS_PER_BEAT - i
+    return float(beats[i] + frac * (beats[i + 1] - beats[i]))
+
+
+def onsets(clip: AudioClip) -> list[Onset]:
+    """Onset times and relative strengths from the onset-strength envelope (C5)."""
+    env = librosa.onset.onset_strength(y=clip.samples, sr=clip.sample_rate)
+    peak = float(env.max()) if env.size else 0.0
+    if peak <= 0:
+        return []
+    frames = librosa.onset.onset_detect(
+        onset_envelope=env, sr=clip.sample_rate, units="frames", backtrack=False
+    )
+    times = librosa.frames_to_time(frames, sr=clip.sample_rate)
+    return [
+        Onset(float(t), float(np.clip(env[f] / peak, 0.0, 1.0)))
+        for f, t in zip(frames, times, strict=True)
+    ]
 
 
 def _fold_tempo(bpm: float, beats: Sequence[float]) -> tuple[float, list[float]]:

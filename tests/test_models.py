@@ -12,8 +12,15 @@ from lamnhac.errors import (
     UsageError,
 )
 from lamnhac.models import (
+    NO_CHORD,
     STANDARD_TUNING,
     AudioClip,
+    ChordChart,
+    ChordDiagram,
+    ChordLabel,
+    ChordShape,
+    ChordsOptions,
+    MusicKey,
     NoteEvent,
     Onset,
     RhythmInfo,
@@ -143,3 +150,74 @@ def test_onset_negative_time_raises() -> None:
 def test_onset_velocity_above_one_raises() -> None:
     with pytest.raises(ValueError):
         Onset(0.5, 1.1)
+
+
+def test_chord_label_valid_and_no_chord() -> None:
+    assert ChordLabel(0, True).root == 0
+    assert ChordLabel(None, False) == NO_CHORD
+
+
+@pytest.mark.parametrize("args", [(12, False), (-1, False), (None, True)])
+def test_chord_label_invalid(args: tuple[int | None, bool]) -> None:
+    with pytest.raises(ValueError):
+        ChordLabel(*args)
+
+
+def test_music_key_validation() -> None:
+    assert MusicKey(11, True).tonic == 11
+    with pytest.raises(ValueError):
+        MusicKey(12, False)
+
+
+def test_chord_shape_validation() -> None:
+    assert ChordShape((-1, 3, 2, 0, 1, 0), 1).first_fret == 1
+    for frets, first in [((0,) * 5, 1), ((0, 0, 0, 0, 0, 25), 1), ((-2, 0, 0, 0, 0, 0), 1)]:
+        with pytest.raises(ValueError):
+            ChordShape(frets, first)
+    with pytest.raises(ValueError):
+        ChordShape((0,) * 6, 0)
+
+
+def test_chord_diagram_validation() -> None:
+    shape = ChordShape((-1, 3, 2, 0, 1, 0), 1)
+    assert ChordDiagram("C", ChordLabel(0, False), shape, False).name == "C"
+    with pytest.raises(ValueError):
+        ChordDiagram("N", NO_CHORD, shape, False)
+    with pytest.raises(ValueError):
+        ChordDiagram("", ChordLabel(0, False), shape, False)
+    with pytest.raises(ValueError):
+        ChordDiagram("C" * 23, ChordLabel(0, False), shape, False)
+    with pytest.raises(ValueError):
+        ChordDiagram("Đ", ChordLabel(0, False), shape, False)
+
+
+def test_chord_chart_validation() -> None:
+    args: dict[str, Any] = {
+        "rhythm": rhythm(),
+        "key": MusicKey(0, False),
+        "unit_slots": 4,
+        "labels": (ChordLabel(0, False),),
+        "bar1_slot": -4,
+        "capo": 0,
+    }
+    assert ChordChart(**args).bar1_slot == -4
+    for bad in ({"unit_slots": 3}, {"capo": 12}, {"capo": -1}):
+        with pytest.raises(ValueError):
+            ChordChart(**{**args, **bad})
+
+
+def test_chords_options_validation() -> None:
+    args: dict[str, Any] = {
+        "input": Path("a.mp3"),
+        "out_dir": Path("."),
+        "formats": frozenset({"gp5"}),
+        "tempo": None,
+        "time_signature": TS44,
+        "pickup_slots": None,
+        "capo": 0,
+        "force": False,
+    }
+    assert ChordsOptions(**args).capo == 0
+    for bad in ({"formats": frozenset()}, {"capo": 12}):
+        with pytest.raises(ValueError):
+            ChordsOptions(**{**args, **bad})

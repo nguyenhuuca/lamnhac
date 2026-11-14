@@ -214,3 +214,105 @@ class ConvertResult:
     warnings: tuple[str, ...]
     rhythm: RhythmInfo
     note_count: int
+
+
+@dataclass(frozen=True)
+class ChordLabel:
+    root: int | None  # pitch class 0..11 (0 = C); None = no chord (N)
+    minor: bool
+
+    def __post_init__(self) -> None:
+        if self.root is not None and not 0 <= self.root <= 11:
+            raise ValueError("root must be in 0..11 or None")
+        if self.root is None and self.minor:
+            raise ValueError("minor must be False when root is None")
+
+
+NO_CHORD = ChordLabel(None, False)
+
+
+@dataclass(frozen=True)
+class MusicKey:
+    tonic: int
+    minor: bool
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.tonic <= 11:
+            raise ValueError("tonic must be in 0..11")
+
+
+@dataclass(frozen=True)
+class ChordShape:
+    frets: tuple[int, ...]  # string 6 -> string 1; -1 = not played
+    first_fret: int
+
+    def __post_init__(self) -> None:
+        if len(self.frets) != 6:
+            raise ValueError("frets must have exactly 6 entries")
+        if any(f != -1 and not 0 <= f <= 24 for f in self.frets):
+            raise ValueError("each fret must be -1 or in 0..24")
+        if self.first_fret < 1:
+            raise ValueError("first_fret must be >= 1")
+
+
+MAX_DIAGRAM_NAME_BYTES = 22
+
+
+@dataclass(frozen=True)
+class ChordDiagram:
+    name: str
+    label: ChordLabel
+    shape: ChordShape
+    sharp: bool
+
+    def __post_init__(self) -> None:
+        if self.label.root is None:
+            raise ValueError("label must have a root")
+        if not self.name or not self.name.isascii() or len(self.name) > MAX_DIAGRAM_NAME_BYTES:
+            raise ValueError(f"name must be 1..{MAX_DIAGRAM_NAME_BYTES} ASCII bytes")
+
+
+@dataclass(frozen=True)
+class ChordChart:
+    rhythm: RhythmInfo
+    key: MusicKey
+    unit_slots: int
+    labels: tuple[ChordLabel, ...]  # labels[j] covers slots [j*unit_slots, (j+1)*unit_slots)
+    bar1_slot: int  # grid slot where bar 1 starts; may be negative
+    capo: int
+
+    def __post_init__(self) -> None:
+        if self.unit_slots not in (2, 4, 8):
+            raise ValueError("unit_slots must be 2, 4 or 8")
+        if not 0 <= self.capo <= 11:
+            raise ValueError("capo must be in 0..11")
+
+
+ChordFormat = Literal["gp5", "txt"]
+
+
+@dataclass(frozen=True)
+class ChordsOptions:
+    input: Path
+    out_dir: Path
+    formats: frozenset[ChordFormat]
+    tempo: float | None
+    time_signature: TimeSignature
+    pickup_slots: int | None
+    capo: int
+    force: bool
+
+    def __post_init__(self) -> None:
+        if not self.formats:
+            raise ValueError("formats must not be empty")
+        if not 0 <= self.capo <= 11:
+            raise ValueError("capo must be in 0..11")
+
+
+@dataclass(frozen=True)
+class ChordsResult:
+    outputs: tuple[Path, ...]
+    errors: tuple[str, ...]
+    warnings: tuple[str, ...]
+    chart: ChordChart
+    change_count: int
