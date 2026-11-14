@@ -19,3 +19,18 @@
 - [x] T16 per-beat alignment (B7b) (31e3fcc)
 - [ ] T14 Eval thêm bản thu guitar thật, độ khớp dây/phím, G3 bài 3 phút
 - [x] T12 Harmonic filter (B4a) + `--max-fret` (B12) (70ed456)
+
+## Chords from song ([plan](docs/plans/plan-chords-from-song.md))
+
+- [ ] C-T1 Refactor rhythm to `OnsetLike` (no behavior change)
+- [ ] C-T2 Models, `rhythm.onsets`, `time_of_slot`, `chord_shapes`
+- [ ] C-T3 `chords.recognize` (chroma, scores, Viterbi)
+- [ ] C-T4 Key, chord names, capo
+- [ ] C-T5 Bar start from chord changes + tab building
+- [ ] C-T6 `.gp5` diagrams + key, `.chords.txt`
+- [ ] C-T7 `pipeline.chords` + CLI subcommand
+- [ ] C-T8 Synthetic chord fixture + integration test
+- [ ] C-T9 Answer parser + metrics (`tests/eval/answers.py`)
+- [ ] C-T10 Chord eval (`pytest -m eval`)
+- [ ] C-T11 Docs (README, guide, algorithms)
+- [ ] C-T12 Eval on owner songs, tune constants, report

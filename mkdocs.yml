@@ -88,6 +88,7 @@ nav:
       - "ADR-0001 Thư viện nhận nốt và xuất file": adr/0001-transcription-and-export-libraries.md
   - Dự án:
       - Plan: plans/plan-mp3-to-guitarpro.md
+      - "Plan hợp âm": plans/plan-chords-from-song.md
       - Tiến độ: tracking.md
       - "Báo cáo spike cài đặt": reports/spike-2026-11-13-install.md
       - "Báo cáo eval G1": reports/eval-2026-11-14-g1.md
