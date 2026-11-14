@@ -1,8 +1,9 @@
 task: lamnhac chords (chord chart from a full song)
-status: in_progress
-progress: 80
-done: C-T1..C-T6 b6454d6; C-T7 CLI c72714f; C-T9 answers 12c0d79; C-T10 eval 1d3b097; C-T11 docs 1e4889d; C-T8 fixture 678e7af
-doing: swarm-review of 29d3361..HEAD
-next: fix blocking review findings; ask owner to push; C-T12 needs owner songs + .hopam.txt
+status: blocked
+progress: 85
+done: C-T1..C-T6 b6454d6; C-T7 CLI c72714f; C-T9 answers 12c0d79; C-T10 eval 1d3b097; C-T11 docs 1e4889d; C-T8 fixture 678e7af; review fix 22b605a
+doing: -
+next: push after owner yes; C-T12 eval on owner songs + .hopam.txt; refactor shared atomic write + pipeline prologue
 plan: docs/plans/plan-chords-from-song.md
-updated: 2026-11-14 15:17
+blocker: owner go-ahead to push; owner songs + .hopam.txt for C-T12
+updated: 2026-11-14 15:22
