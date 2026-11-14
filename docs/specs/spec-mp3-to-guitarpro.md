@@ -124,7 +124,7 @@ Tempo luôn tính theo nốt đen, và một slot luôn là một nốt móc ké
 - **B12. Cách bấm hợp lệ.** Một nốt đặt được trên dây `s` khi `0 ≤ pitch − tuning[s] ≤ max_fret` (mặc định 24, đặt bằng `--max-fret`, R14). Nốt không đặt được trên dây nào thì bị bỏ, kèm cảnh báo `bỏ N nốt ngoài tầm cây đàn`. Mỗi slot liệt kê mọi cách gán mỗi nốt một dây khác nhau, tối đa 6! = 720 tổ hợp. Nếu slot có hơn 6 nốt, hoặc không có cách gán nào (ví dụ 40 và 41 chỉ đặt được trên dây 6), thì bỏ nốt có velocity thấp nhất và thử lại cho đến khi có cách gán, kèm cảnh báo. Ưu tiên các cách bấm có độ trải phím (các phím ≠ 0) ≤ 4. Nếu không có cách nào như vậy thì nhận cách có độ trải nhỏ nhất và cảnh báo.
 - **B13. Beam search.** Trạng thái là một cách bấm của một slot có nốt. Slot dấu lặng bị bỏ qua.
   - `tâm(state)` = trung bình các phím ≠ 0, hoặc `None` nếu toàn dây buông. `tâm` chỉ phụ thuộc trạng thái, nên DP hợp lệ.
-  - Chi phí trạng thái = `span + 0.3 × Σ max(0, fret − 12)`.
+  - Chi phí trạng thái = `span + 0.3 × centre + 0.3 × Σ max(0, fret − 12)`, với `centre` là trung bình các phím bấm (bỏ dây buông; thế toàn dây buông thì 0). Hạng `0.3 × centre` ưu tiên thế bấm thấp; thêm 2026-11-14 sau eval: độ khớp dây/phím với tab chuẩn 77% / 60% → 98% / 94%.
   - Chi phí chuyển = `|tâm_trước − tâm_này|`, bằng 0 nếu một trong hai là `None`.
   - Mỗi slot giữ 64 đường đi rẻ nhất (beam search, không phải Viterbi đầy đủ).
   - Hoà chi phí thì chọn theo thứ tự: tổng phím nhỏ hơn, rồi bộ `(string, fret)` nhỏ hơn theo thứ tự từ điển, để kết quả luôn xác định.

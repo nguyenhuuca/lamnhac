@@ -145,7 +145,7 @@ Một cao độ có thể bấm ở nhiều chỗ: E4 (MIDI 64) là dây 1 buôn
 
 | Thành phần | Công thức | Ý nghĩa |
 |------------|-----------|---------|
-| Chi phí của một thế | `độ trải + 0.3 × Σ max(0, phím − 12)` | Phạt thế mở rộng tay và phạt vùng phím cao |
+| Chi phí của một thế | `độ trải + 0.3 × vị trí + 0.3 × Σ max(0, phím − 12)` | Phạt thế mở rộng tay, ưu tiên thế thấp gần đầu cần (vị trí = trung bình các phím bấm, không tính dây buông), phạt vùng phím cao |
 | Chi phí chuyển giữa hai thế | `|tâm_trước − tâm_sau|` | Phạt việc tay phải chạy dọc cần đàn |
 
 `tâm` là trung bình các phím bấm, không tính dây buông. Nếu một thế toàn dây buông thì `tâm = None` và chi phí chuyển bằng 0, vì tay đang tự do.

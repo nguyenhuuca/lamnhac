@@ -187,3 +187,10 @@ def test_default_range_warning_has_no_fret_limit() -> None:
 def test_max_fret_out_of_range_rejected() -> None:
     with pytest.raises(ValueError):
         assign(make_score([[64]]), STANDARD_TUNING, max_fret=25)
+
+
+def test_prefers_open_position_over_compact_shape_up_the_neck() -> None:
+    # A3 + D4: open-position G string fret 2 + B string fret 3 (span 1), not D/G strings at
+    # fret 7 (span 0). Seen in a reference tab; the span-only cost picked fret 7.
+    tab, _ = assign(make_score([[57, 62]]), STANDARD_TUNING)
+    assert {(n.string, n.fret) for n in tab.slots[0].notes} == {(3, 2), (2, 3)}

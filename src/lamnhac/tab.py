@@ -17,6 +17,10 @@ MAX_FRET = 24
 MAX_SPAN = 4
 BEAM_WIDTH = 64
 HIGH_FRET_WEIGHT = 0.3
+# Prefer low positions: cost per fret of the mean fretted position. Without it a compact shape
+# at fret 7 ties with the open-position one players use (eval 2026-11-14: string/fret match with
+# reference tabs 77% / 60% -> 98% / 94% at 0.3).
+POSITION_WEIGHT = 0.3
 
 _NAME_RE = re.compile(r"^[A-G][#b]?$")
 _PITCH_CLASS = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
@@ -79,7 +83,9 @@ def _centre(f: Fingering) -> float | None:
 
 
 def _state_cost(f: Fingering) -> float:
-    return _span(f) + HIGH_FRET_WEIGHT * sum(max(0, fr - 12) for _, fr in f)
+    centre = _centre(f)
+    position = POSITION_WEIGHT * centre if centre is not None else 0.0
+    return _span(f) + position + HIGH_FRET_WEIGHT * sum(max(0, fr - 12) for _, fr in f)
 
 
 def _key(f: Fingering) -> Key:

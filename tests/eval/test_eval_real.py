@@ -17,13 +17,15 @@ import mir_eval
 import numpy as np
 import pytest
 
+from lamnhac import tab
 from lamnhac import transcribe as tr
 from lamnhac.audio import load
-from lamnhac.models import Sensitivity, Tuning
+from lamnhac.models import GridNote, RhythmInfo, Score, Sensitivity, Slot, TimeSignature, Tuning
 
 REAL = Path(__file__).parent.parent / "fixtures" / "real"
 PAIRS = sorted(p for p in REAL.glob("*.gp5") if p.with_suffix(".mp3").exists())
 F1_TARGET = 0.70  # PRD G1
+TAB_MATCH_TARGET = 0.85  # string+fret equal to the reference tab, given perfect notes
 ONSET_TOLERANCE_S = 0.05
 _PAD_S = 2.0  # keeps shifted intervals non-negative for mir_eval
 
@@ -97,3 +99,40 @@ def test_note_f1(gp5: Path) -> None:
             f"P {p:.3f} R {r:.3f} F1 {f:.3f} ({elapsed:.1f}s, audio {clip.duration_s:.1f}s)"
         )
     assert scores["normal"][2] >= F1_TARGET
+
+
+def reference_beats(gp5: Path) -> tuple[list[list[tuple[int, int, int]]], Tuning]:
+    """Struck notes per beat as (pitch, string 1..6, fret), first track."""
+    song = guitarpro.parse(str(gp5))
+    track = song.tracks[0]
+    beats = []
+    for measure in track.measures:
+        for beat in measure.voices[0].beats:
+            struck = [
+                (n.value + track.strings[n.string - 1].value, n.string, n.value)
+                for n in beat.notes
+                if n.type not in (guitarpro.NoteType.tie, guitarpro.NoteType.dead)
+            ]
+            if struck:
+                beats.append(struck)
+    return beats, Tuning(tuple(s.value for s in track.strings))
+
+
+@pytest.mark.skipif(not PAIRS, reason=f"no .mp3 + .gp5 pairs in {REAL}")
+@pytest.mark.parametrize("gp5", PAIRS, ids=[p.stem for p in PAIRS])
+def test_string_fret_match_with_reference_notes(gp5: Path) -> None:
+    """Tab step alone: given the reference's own notes, how often is string+fret the same."""
+    beats, tuning = reference_beats(gp5)
+    bar = TimeSignature(4, 4).bar_slots
+    slots = [Slot(i, 1, tuple(GridNote(p, 0.8) for p, _, _ in b)) for i, b in enumerate(beats)]
+    slots += [Slot(i, 1) for i in range(len(slots), -(-len(slots) // bar) * bar)]
+    rhythm = RhythmInfo(100.0, (0.0, 0.6), 0, TimeSignature(4, 4), "user")
+    out, _ = tab.assign(Score(rhythm, tuple(slots)), tuning)
+    same = total = 0
+    for struck, chosen in zip(beats, out.slots, strict=False):
+        got = {n.pitch: (n.string, n.fret) for n in chosen.notes}
+        for pitch, string, fret in struck:
+            total += 1
+            same += got.get(pitch) == (string, fret)
+    print(f"\n{gp5.stem}: same string+fret {same}/{total} ({same / total:.0%})")
+    assert same / total >= TAB_MATCH_TARGET
