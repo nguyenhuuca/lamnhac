@@ -26,6 +26,7 @@ packages = ["src/lamnhac"]
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
+extend-exclude = ["scripts/mkdocs_hooks.py"]  # vendored verbatim from agentic-sdlc
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
