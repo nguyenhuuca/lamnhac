@@ -56,7 +56,10 @@ def convert(opts: ConvertOptions, progress: Callable[[str], None]) -> ConvertRes
     t = step(2, "nhận nốt")
     with redirect_stdout(sys.stderr):  # basic-pitch print()s to stdout; stdout is for paths only
         notes, warnings = transcribe.transcribe(
-            clip, opts.tuning, filter_harmonics=opts.filter_harmonics
+            clip,
+            opts.tuning,
+            filter_harmonics=opts.filter_harmonics,
+            sensitivity=opts.sensitivity,
         )
     done("transcribe", t)
 

@@ -30,7 +30,7 @@ def _opts(
 def stub_model(monkeypatch: pytest.MonkeyPatch) -> None:
     truth = json.loads((FIXTURES / "scale_c.json").read_text())
 
-    def fake(_clip: Any, _low: float, _high: float) -> Sequence[Sequence[Any]]:
+    def fake(_clip: Any, _low: float, _high: float, *_: Any) -> Sequence[Sequence[Any]]:
         return [(n["onset_s"], n["offset_s"], n["pitch"], 0.8, None) for n in truth["notes"]]
 
     monkeypatch.setattr(transcribe, "_predict", fake)

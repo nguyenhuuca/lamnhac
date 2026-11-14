@@ -101,10 +101,10 @@ stdout chỉ in đường dẫn các file đã tạo, mỗi file một dòng, đ
 
 **Nhận nốt (R3)**
 - **B3.** `basic_pitch.inference.predict` nhận đường dẫn file, không nhận mảng audio, nên truyền `clip.source`. File vì vậy được decode hai lần: một lần ở B2 để kiểm tra an toàn và phân tích nhịp, một lần trong basic-pitch. Điều này chấp nhận được vì B2 đã loại file độc hại trước, còn thời gian decode nhỏ so với thời gian chạy model. Các tham số:
-  - `onset_threshold=0.5`, `frame_threshold=0.3`, `minimum_note_length=58` (ms);
+  - `onset_threshold`, `frame_threshold`, `minimum_note_length` (ms) theo `--sensitivity` (R15): `low` = 0.85 / 0.5 / 128, **`normal`** (mặc định) = 0.75 / 0.5 / 93, `high` = 0.5 / 0.3 / 58 (mặc định cũ). Chọn theo eval 2026-11-14 (`docs/reports/eval-2026-11-14-g1.md`);
   - `minimum_frequency = hz(min(tuning.strings) − 1)` và `maximum_frequency = hz(max(tuning.strings) + 25)`, với `hz(m) = 440 × 2^((m−69)/12)`. Như vậy Drop D và các tuning thấp hơn vẫn được phủ.
 
-  Hàm trả về `(model_output, midi_data, note_events)`. Mỗi `note_event` có dạng `(start_s, end_s, pitch, amplitude, pitch_bends)` và được đổi sang `NoteEvent(velocity=amplitude)`, sắp theo `onset_s`. Các ngưỡng là hằng số trong `transcribe.py` để chỉnh sau khi đo G1.
+  Hàm trả về `(model_output, midi_data, note_events)`. Mỗi `note_event` có dạng `(start_s, end_s, pitch, amplitude, pitch_bends)` và được đổi sang `NoteEvent(velocity=amplitude)`, sắp theo `onset_s`. Các ngưỡng nằm trong bảng `THRESHOLDS` của `transcribe.py`; `transcribe(clip, tuning, filter_harmonics=False, sensitivity="normal")`, và `ConvertOptions.sensitivity` mang giá trị từ CLI.
 - **B4.** Không có nốt nào sau B3 thì sinh `ProcessingError("không nhận được nốt nào — file có phải guitar không?")`.
 - **B4a. Lọc hoạ âm** (R13, **tắt mặc định**, bật bằng `--filter-harmonics`). Bỏ nốt `n` nếu tồn tại nốt `m` sao cho: `n.pitch − m.pitch ∈ {12, 19, 24, 28, 31, 36}` (hoạ âm bậc 2, 3, 4, 5, 6, 8); `|n.onset − m.onset| ≤ 80 ms`; hai nốt vang chồng nhau; và `n.velocity ≤ 0.8 × m.velocity`. Ngưỡng 0.8 chọn theo đo đạc 2026-11-13: trên riff mẫu precision 0.71 → 0.92, recall giữ 1.00; trên testgod.mp3 bỏ 53/297 nốt. Lọc chạy trong `transcribe` sau khi đổi sang `NoteEvent`, trước B4 (nếu lọc xong không còn nốt thì vẫn báo B4). Số nốt bị bỏ được thêm vào cảnh báo: `bỏ N nốt hoạ âm`. Lọc tắt mặc định vì basic-pitch báo quãng tám *thật* trong hợp âm (power chord E2+B2+E3) nhỏ chỉ ~0.5× nốt trầm, nên ngưỡng 0.8 bỏ nhầm nó ở 3/4 lần gảy (test `xfail` ghi nhận). Hợp với câu lead đánh từng nốt. Với hợp âm, dùng `--max-fret` thay thế.
 
@@ -183,7 +183,7 @@ Tempo luôn tính theo nốt đen, và một slot luôn là một nốt móc ké
 | Integration | `export_musicxml`: ghi rồi đọc lại bằng `music21.converter.parse`. XML có `staff-tuning` đúng với Drop D | B15, B18 |
 | Integration | `pipeline.convert` với fixture MP3 khoảng 5 s trong repo (gảy tổng hợp, có tab chuẩn kèm theo), chạy basic-pitch thật. Kiểm "≥ 80% số nốt của fixture được nhận". Socket bị chặn bằng fixture monkeypatch `socket.socket.connect` | B3, B4, B14, B19, B20, R9 |
 | E2E | Gọi CLI qua `subprocess`: mã thoát 0, 2, 3, 5, nội dung stdout và stderr (có các dòng `[k/6]`) | CLI, B14, B19, B21, R10 |
-| Eval (`@pytest.mark.eval`, mặc định không chạy) | Note F1 bằng `mir_eval.transcription.precision_recall_f1_overlap(..., onset_tolerance=0.05, offset_ratio=None)` trên các bản solo của GuitarSet (CC BY 4.0), tải về ngoài repo. Đo thời gian bài 3 phút (G3) | G1, G3 |
+| Eval (`@pytest.mark.eval`, mặc định không chạy) | Note F1 bằng `mir_eval.transcription.precision_recall_f1_overlap(..., onset_tolerance=0.05, offset_ratio=None)` trên các cặp `<bài>.mp3` + `<bài>.gp5` (tab chuẩn) trong `tests/fixtures/real/` (git-ignored, dữ liệu của owner), lệch thời gian toàn bài được dò trong ±1 s. GuitarSet (CC BY 4.0) dùng được theo cùng cách nếu đổi sang `.gp5`. Đo thời gian bài 3 phút (G3) | G1, G3 |
 | Thủ công | Mở các file mẫu trong Guitar Pro (phiên bản owner đang dùng) | R6, R7, G2 |
 
 Gates sẽ ghi vào `sdlc.config.json`: `uv run ruff check`, `uv run ruff format --check`, `uv run mypy --strict src`, `uv run pytest -m "not eval"`.

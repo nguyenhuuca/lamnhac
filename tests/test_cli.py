@@ -32,7 +32,7 @@ def run(*args: str | Path) -> subprocess.CompletedProcess[str]:
 def _stub_model(monkeypatch: pytest.MonkeyPatch) -> int:
     truth = json.loads((FIXTURES / "scale_c.json").read_text())
 
-    def fake(_clip: Any, _low: float, _high: float) -> Sequence[Sequence[Any]]:
+    def fake(_clip: Any, _low: float, _high: float, *_: Any) -> Sequence[Sequence[Any]]:
         return [(n["onset_s"], n["offset_s"], n["pitch"], 0.8, None) for n in truth["notes"]]
 
     monkeypatch.setattr(transcribe, "_predict", fake)
@@ -112,7 +112,7 @@ def test_existing_output_exit_five_without_force(tmp_path: Path) -> None:
 def test_no_notes_exit_four(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
-    def no_events(_clip: Any, _low: float, _high: float) -> Sequence[Sequence[Any]]:
+    def no_events(_clip: Any, _low: float, _high: float, *_: Any) -> Sequence[Sequence[Any]]:
         return []
 
     monkeypatch.setattr(transcribe, "_predict", no_events)
@@ -151,6 +151,8 @@ def test_gp5_writer_failure_exit_five_keeps_musicxml(
         (["--max-fret", "5"], "max_fret", 5),
         (["--max-fret", "0"], "max_fret", 0),
         (["--filter-harmonics"], "filter_harmonics", True),
+        (["--sensitivity", "high"], "sensitivity", "high"),
+        (["--sensitivity", "low"], "sensitivity", "low"),
         (["--format", "gp5"], "formats", frozenset({"gp5"})),
     ],
 )
@@ -175,6 +177,7 @@ def test_default_options_and_out_dir(monkeypatch: pytest.MonkeyPatch) -> None:
     assert opts.force is False
     assert opts.max_fret == 24
     assert opts.filter_harmonics is False
+    assert opts.sensitivity == "normal"
     assert opts.formats == frozenset({"gp5", "musicxml"})
 
 
@@ -244,3 +247,7 @@ def test_convert_end_to_end(tmp_path: Path) -> None:
 @pytest.mark.parametrize("value", ["25", "-1", "abc"])
 def test_bad_max_fret_exit_two(value: str, tmp_path: Path) -> None:
     assert main(["convert", str(SCALE), "-o", str(tmp_path), "--max-fret", value]) == 2
+
+
+def test_bad_sensitivity_exit_two(tmp_path: Path) -> None:
+    assert main(["convert", str(SCALE), "-o", str(tmp_path), "--sensitivity", "max"]) == 2

@@ -33,6 +33,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="drop overtone notes (good for single-note lines; may drop real octaves in chords)",
     )
+    c.add_argument(
+        "--sensitivity",
+        choices=("low", "normal", "high"),
+        default="normal",
+        help="note detection: high catches more notes (and more junk), low fewer",
+    )
     c.add_argument("--force", action="store_true", help="overwrite existing outputs")
     c.add_argument("-v", "--verbose", action="store_true", help="DEBUG logging, tracebacks")
     return parser
@@ -75,6 +81,7 @@ def _options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Conve
         force=args.force,
         max_fret=args.max_fret,
         filter_harmonics=args.filter_harmonics,
+        sensitivity=args.sensitivity,
     )
 
 

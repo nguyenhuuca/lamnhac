@@ -12,5 +12,7 @@
 - [x] T8 `export_musicxml` (a0d8234)
 - [x] T9 `pipeline` + `cli` (MusicXML only) (d1d0655)
 - [x] T10 `export_gp5` + pipeline wiring (c185dc5)
-- [ ] T11 Eval G1/G3 + report
+- [x] T11 Eval G1 + report (G3 chưa đo: chưa có bài 3 phút có tab) (COMMIT)
+- [x] T13 `--sensitivity` + new default thresholds (COMMIT)
+- [ ] T14 Eval thêm bản thu guitar thật, độ khớp dây/phím, G3 bài 3 phút
 - [x] T12 Harmonic filter (B4a) + `--max-fret` (B12) (70ed456)

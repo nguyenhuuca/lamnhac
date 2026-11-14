@@ -58,6 +58,7 @@ Lần chạy đầu mất thêm khoảng 10 giây để nạp model TensorFlow. 
 | `--time N/D` | `4/4` | Số chỉ nhịp, ví dụ `3/4`, `6/8`, `2/2` |
 | `--max-fret N` | 24 | Chỉ dùng phím 0..N khi gán tab. Nốt không bấm được trong vùng đó bị bỏ, kèm cảnh báo. Hữu ích khi biết người chơi chỉ ở vài ngăn đầu, và cũng loại được phần lớn hoạ âm |
 | `--filter-harmonics` | tắt | Bỏ các nốt giả do hoạ âm (cao hơn 1–3 quãng tám, nhỏ hơn rõ rệt). Tốt cho câu lead đánh từng nốt, nhưng **có thể bỏ nhầm quãng tám thật** trong hợp âm |
+| `--sensitivity LEVEL` | `normal` | Độ nhạy nhận nốt: `low`, `normal` hoặc `high`. Ra nhiều nốt thừa thì dùng `low`; sót nốt, hoặc bài nhiều hợp âm có quãng tám, thì dùng `high` |
 | `--force` | tắt | Cho phép ghi đè file đã có. Nếu không bật, lệnh sẽ dừng **trước khi** xử lý |
 | `-v, --verbose` | tắt | In log chi tiết và stack trace khi có lỗi |
 
@@ -75,6 +76,10 @@ uv run lamnhac convert bai.mp3 --max-fret 5
 
 # Câu lead đánh từng nốt, có nhiều nốt giả do hoạ âm
 uv run lamnhac convert bai.mp3 --filter-harmonics
+
+# Ra quá nhiều nốt thừa: giảm độ nhạy. Sót nốt: tăng độ nhạy
+uv run lamnhac convert bai.mp3 --sensitivity low
+uv run lamnhac convert bai.mp3 --sensitivity high
 
 # Chỉ cần file .gp5
 uv run lamnhac convert bai.mp3 --format gp5
@@ -108,7 +113,22 @@ Hữu ích khi gọi tool từ script khác. stdout chỉ in đường dẫn cá
 - Không nhận kỹ thuật bend, slide, hammer-on, pull-off hay vibrato.
 - Phách mạnh được đoán theo nốt được nhấn mạnh nhất. Nếu ô nhịp bị lệch, hãy sửa trong Guitar Pro.
 - Thường có nốt thừa do **hoạ âm** (tần số gấp 2, 3, 4… lần của nốt thật, sinh ra từ chính dây vừa gảy). Dùng `--max-fret` hoặc `--filter-harmonics` để giảm, xem [docs/algorithms.md](algorithms.md#21-lọc-hoạ-âm-tuỳ-chọn).
+- Ở mức `normal`, nốt quãng tám trong hợp âm (ví dụ E3 của power chord E2+B2+E3) có thể bị bỏ. Bài nhiều hợp âm thì thử `--sensitivity high`.
 - File đầu vào giới hạn 50 MB và 10 phút.
+
+## Đo độ chính xác
+
+Muốn biết tool đúng đến đâu trên nhạc của bạn, đặt từng cặp file cùng tên vào `tests/fixtures/real/`:
+- `<bài>.mp3`: bản thu;
+- `<bài>.gp5`: tab **đúng** của bản thu đó, ví dụ bạn đã sửa tay trong Guitar Pro 8.
+
+Thư mục này nằm trong `.gitignore`, nên file của bạn không bị đưa lên GitHub. Sau đó chạy:
+
+```powershell
+uv run pytest -m eval -s
+```
+
+Mỗi bài in ra Note F1 ở cả ba mức `--sensitivity`. Một nốt tính là đúng khi đúng cao độ và bắt đầu lệch không quá 50 ms so với tab. F1 = 1 là khớp hoàn toàn, mục tiêu là ≥ 0.70. Kết quả gần nhất nằm trong [báo cáo eval](reports/eval-2026-11-14-g1.md).
 
 ## Phát triển
 
@@ -119,6 +139,7 @@ uv run ruff format --check           # kiểm tra format
 uv run mypy src                      # kiểm tra kiểu (strict)
 uv run pytest -m "not eval"          # test, khoảng 1 phút, có chạy model thật
 uv run python tests/fixtures/make_fixtures.py   # sinh lại các file MP3 mẫu
+uv run pytest -m eval -s             # đo Note F1 trên tests/fixtures/real/*.mp3 + .gp5 (dữ liệu cục bộ)
 ```
 
 Bốn lệnh `ruff`, `mypy` và `pytest` ở trên là các gate, được khai trong `sdlc.config.json`. Mọi commit phải qua hết các gate này.

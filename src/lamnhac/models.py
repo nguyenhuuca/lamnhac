@@ -11,6 +11,7 @@ SAMPLE_RATE = 22050
 MAX_DURATION_S = 600.0
 Format = Literal["gp5", "musicxml"]
 TempoSource = Literal["detected", "user"]
+Sensitivity = Literal["low", "normal", "high"]  # note-detection thresholds (spec B3)
 
 
 @dataclass(frozen=True)
@@ -176,6 +177,7 @@ class ConvertOptions:
     force: bool
     max_fret: int = 24
     filter_harmonics: bool = False  # B4a is opt-in: it drops real octaves in chords
+    sensitivity: Sensitivity = "normal"
 
     def __post_init__(self) -> None:
         if not 0 <= self.max_fret <= 24:

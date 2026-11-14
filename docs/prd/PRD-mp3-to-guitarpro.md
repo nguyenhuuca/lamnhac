@@ -49,6 +49,7 @@ Bằng chứng: nhu cầu của chính owner (người dùng đầu tiên). Repo
 | R12 | Cho phép đặt time signature (`--time 3/4`) | could | Given `--time 3/4`, when convert, then ô nhịp chia theo 3/4 |
 | R13 | Lọc hoạ âm: bỏ nốt giả do hoạ âm của một nốt trầm hơn | should | Given bản thu có dây trầm buông ngân, when convert, then hoạ âm (+12, +19, +24, +28, +31, +36 nửa cung, cùng lúc, nhỏ hơn rõ rệt) không thành nốt riêng, còn quãng tám thật trong power chord vẫn giữ; bật bằng `--filter-harmonics` (mặc định tắt, vì có thể bỏ nhầm quãng tám thật trong hợp âm) |
 | R14 | Giới hạn vùng phím `--max-fret N` | should | Given `--max-fret 5`, when convert, then mọi nốt trong tab có phím ≤ 5, nốt không bấm được trong vùng đó bị bỏ kèm cảnh báo |
+| R15 | Chỉnh độ nhạy nhận nốt `--sensitivity low\|normal\|high` | should | Given bản thu bị ra thừa hoặc sót nốt, when convert với `low` hoặc `high`, then số nốt giảm hoặc tăng tương ứng; mặc định `normal` đạt G1 trên bộ eval |
 
 ## Constraints and Risks
 
@@ -76,3 +77,4 @@ Bằng chứng: nhu cầu của chính owner (người dùng đầu tiên). Repo
 
 - 2026-11-13: R13, R14 thêm sau khi chạy thử bản thu thật (testgod.mp3) thấy dư hoạ âm và người chơi chỉ dùng vài ngăn đầu.
 - 2026-11-13: R13 chuyển sang opt-in sau khi test power chord cho thấy lọc theo độ to bỏ nhầm quãng tám thật.
+- 2026-11-14: R15 thêm sau eval G1 trên bài có tab chuẩn: ngưỡng cũ cho F1 0.58, mặc định mới 0.89. Câu hỏi bộ test G1 đã có câu trả lời: owner cung cấp bản thu kèm `.gp5` chuẩn.

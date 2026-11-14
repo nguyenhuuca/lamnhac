@@ -29,7 +29,7 @@ def _stub(
 ) -> list[tuple[float, float]]:
     seen: list[tuple[float, float]] = []
 
-    def fake(_clip: AudioClip, low: float, high: float) -> Sequence[Sequence[Any]]:
+    def fake(_clip: AudioClip, low: float, high: float, *_: Any) -> Sequence[Sequence[Any]]:
         seen.append((low, high))
         return events
 
@@ -84,7 +84,7 @@ def test_only_zero_length_raises(monkeypatch: pytest.MonkeyPatch, clip: AudioCli
 
 
 def test_backend_exception_wrapped(monkeypatch: pytest.MonkeyPatch, clip: AudioClip) -> None:
-    def boom(_c: AudioClip, _l: float, _h: float) -> list[Any]:
+    def boom(_c: AudioClip, _l: float, _h: float, *_: Any) -> list[Any]:
         raise RuntimeError("tf exploded")
 
     monkeypatch.setattr(tr, "_predict", boom)
@@ -205,8 +205,10 @@ def _match(notes: list[NoteEvent], truth: list[dict[str, float]]) -> tuple[int, 
 
 @pytest.fixture(scope="module")
 def power_chord_notes() -> list[NoteEvent]:
+    # "high" is the setting documented for chord-heavy playing: basic-pitch reports the
+    # octave of a power chord weakly, and "normal"'s frame threshold (0.5) drops it.
     clip = load(FIXTURES / "power_chord.mp3")
-    return tr.transcribe(clip, STANDARD_TUNING, filter_harmonics=False)[0]
+    return tr.transcribe(clip, STANDARD_TUNING, sensitivity="high")[0]
 
 
 @pytest.fixture(scope="module")
@@ -226,8 +228,17 @@ def _e3_strikes(notes: list[NoteEvent]) -> int:
 def test_real_model_power_chord_octave_kept_without_filter(
     power_chord_notes: list[NoteEvent],
 ) -> None:
-    # Default pipeline (filter off): the real octave E3 of E2+B2+E3 survives.
+    # Filter off, high sensitivity: the real octave E3 of E2+B2+E3 survives.
     assert _e3_strikes(power_chord_notes) >= 3
+
+
+def test_real_model_power_chord_root_and_fifth_at_normal() -> None:
+    notes, _ = tr.transcribe(load(FIXTURES / "power_chord.mp3"), STANDARD_TUNING)
+    for pitch in (40, 47):  # E2, B2 on every strike; E3 is the known loss at "normal"
+        hits = sum(
+            any(n.pitch == pitch and abs(n.onset_s - t) <= 0.05 for n in notes) for t in _STRIKES
+        )
+        assert hits == len(_STRIKES)
 
 
 @pytest.mark.xfail(
@@ -250,3 +261,30 @@ def test_real_model_riff_precision_recall(riff_notes: list[NoteEvent]) -> None:
     print(f"riff precision {precision:.2f}, recall {recall:.2f}")
     assert precision >= 0.9
     assert recall == 1.0
+
+
+def test_sensitivity_reaches_backend(monkeypatch: pytest.MonkeyPatch, clip: AudioClip) -> None:
+    seen: list[Any] = []
+
+    def fake(_c: AudioClip, _l: float, _h: float, sensitivity: Any) -> list[Any]:
+        seen.append(sensitivity)
+        return [(0.0, 0.5, 60, 0.5, None)]
+
+    monkeypatch.setattr(tr, "_predict", fake)
+    tr.transcribe(clip, STANDARD_TUNING)
+    tr.transcribe(clip, STANDARD_TUNING, sensitivity="high")
+    assert seen == ["normal", "high"]
+
+
+def test_thresholds_ordered_from_strict_to_loose() -> None:
+    low, normal, high = (tr.THRESHOLDS[k] for k in ("low", "normal", "high"))
+    for i in range(3):  # onset, frame, minimum length: each is lower when more sensitive
+        assert low[i] >= normal[i] >= high[i]
+    assert low != normal != high
+
+
+def test_high_sensitivity_finds_more_notes_on_real_model() -> None:
+    clip = load(FIXTURES / "riff_97bpm.mp3")
+    normal, _ = tr.transcribe(clip, STANDARD_TUNING)
+    high, _ = tr.transcribe(clip, STANDARD_TUNING, sensitivity="high")
+    assert len(high) > len(normal)

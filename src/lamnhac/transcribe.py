@@ -6,11 +6,17 @@ from collections.abc import Sequence
 from typing import Any
 
 from lamnhac.errors import ProcessingError
-from lamnhac.models import AudioClip, NoteEvent, Tuning
+from lamnhac.models import AudioClip, NoteEvent, Sensitivity, Tuning
 
-ONSET_THRESHOLD = 0.5
-FRAME_THRESHOLD = 0.3
-MIN_NOTE_LENGTH_MS = 58.0
+# (onset_threshold, frame_threshold, minimum_note_length ms) per --sensitivity (spec B3).
+# Measured 2026-11-14 (docs/reports/eval-2026-11-14-g1.md): "high" was the old default and
+# doubled the note count on a real song (F1 0.58); "normal" scored 0.89 there and 1.00 on the
+# synthetic riff and scale.
+THRESHOLDS: dict[Sensitivity, tuple[float, float, float]] = {
+    "low": (0.85, 0.5, 128.0),
+    "normal": (0.75, 0.5, 93.0),
+    "high": (0.5, 0.3, 58.0),
+}
 LOW_MARGIN_SEMITONES = 1
 HIGH_MARGIN_SEMITONES = 25  # highest string + 24 frets + 1 semitone of slack
 HARMONIC_INTERVALS = frozenset({12, 19, 24, 28, 31, 36})
@@ -32,7 +38,9 @@ def frequency_range(tuning: Tuning) -> tuple[float, float]:
     return low, high
 
 
-def _predict(clip: AudioClip, low_hz: float, high_hz: float) -> Sequence[Sequence[Any]]:
+def _predict(
+    clip: AudioClip, low_hz: float, high_hz: float, sensitivity: Sensitivity
+) -> Sequence[Sequence[Any]]:
     """Run basic-pitch and return its raw note events. Patched in unit tests."""
     global _model
     # Silence TensorFlow's C++ info/warning spam; must be set before the first TF import.
@@ -43,12 +51,13 @@ def _predict(clip: AudioClip, low_hz: float, high_hz: float) -> Sequence[Sequenc
 
     if _model is None:
         _model = Model(ICASSP_2022_MODEL_PATH)
+    onset, frame, min_len_ms = THRESHOLDS[sensitivity]
     _, _, events = predict(
         str(clip.source),
         _model,
-        onset_threshold=ONSET_THRESHOLD,
-        frame_threshold=FRAME_THRESHOLD,
-        minimum_note_length=MIN_NOTE_LENGTH_MS,
+        onset_threshold=onset,
+        frame_threshold=frame,
+        minimum_note_length=min_len_ms,
         minimum_frequency=low_hz,
         maximum_frequency=high_hz,
     )
@@ -84,11 +93,14 @@ _apply_filter = filter_harmonics  # transcribe()'s parameter of the same name sh
 
 
 def transcribe(
-    clip: AudioClip, tuning: Tuning, filter_harmonics: bool = False
+    clip: AudioClip,
+    tuning: Tuning,
+    filter_harmonics: bool = False,
+    sensitivity: Sensitivity = "normal",
 ) -> tuple[list[NoteEvent], list[str]]:
     low, high = frequency_range(tuning)
     try:
-        raw = _predict(clip, low, high)
+        raw = _predict(clip, low, high, sensitivity)
         notes = [
             NoteEvent(
                 onset_s=float(ev[0]),

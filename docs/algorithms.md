@@ -39,13 +39,32 @@ lamnhac chỉnh basic-pitch như sau:
 
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| `onset_threshold` | 0.5 | Ngưỡng tạo nốt mới. Cao hơn thì ít nốt thừa hơn nhưng dễ sót nốt |
-| `frame_threshold` | 0.3 | Ngưỡng coi nốt còn đang vang |
-| `minimum_note_length` | 58 ms | Bỏ các mẩu nốt quá ngắn, thường là nhiễu |
+| `onset_threshold` | theo `--sensitivity` (bảng dưới) | Ngưỡng tạo nốt mới. Cao hơn thì ít nốt thừa hơn nhưng dễ sót nốt |
+| `frame_threshold` | theo `--sensitivity` | Ngưỡng coi nốt còn đang vang |
+| `minimum_note_length` | theo `--sensitivity` | Bỏ các mẩu nốt quá ngắn, thường là nhiễu hoặc tiếng ngân bị nhận lại |
 | `minimum_frequency` | tần số của *dây trầm nhất − 1 nửa cung* | Tính theo tuning, nên Drop D (D2 = 73,4 Hz) không bị cắt |
 | `maximum_frequency` | tần số của *dây cao nhất + 25 nửa cung* | Đủ tới phím 24 cộng một nửa cung dư |
 
 Giới hạn dải tần theo tuning giúp loại bớt hoạ âm cao và tiếng ồn trầm vốn không thể là nốt guitar. Model được nạp **một lần cho mỗi tiến trình**: lần đầu khoảng 11 giây do nạp TensorFlow, các lần sau dưới 1 giây.
+
+### 2.0 Độ nhạy (`--sensitivity`)
+
+Ba ngưỡng trên quyết định tool "nghe" nhạy đến đâu. Chúng được chọn bằng cách đo, không đoán:
+
+| Mức | onset | frame | nốt ngắn nhất | Khi nào dùng |
+|-----|-------|-------|---------------|--------------|
+| `low` | 0.85 | 0.5 | 128 ms | Kết quả còn nhiều nốt thừa |
+| **`normal`** (mặc định) | 0.75 | 0.5 | 93 ms | Đa số trường hợp |
+| `high` | 0.5 | 0.3 | 58 ms | Tool sót nốt; bài nhiều hợp âm có quãng tám |
+
+Số đo ngày 2026-11-14 (Note F1, xem [báo cáo](reports/eval-2026-11-14-g1.md)):
+
+| Bài | low | normal | high |
+|-----|-----|--------|------|
+| Afternoon Tea (149 nốt, có tab chuẩn) | 0.92 | 0.89 | 0.58 |
+| Riff tổng hợp 97 BPM | 1.00 | 1.00 | 0.83 |
+
+Mức `high` từng là mặc định. Trên bài thật nó ra **gấp đôi** số nốt: tiếng ngân và tiếng vang bị nhận thành nốt mới, cộng thêm nốt lệch quãng tám. Đổi lại, `high` là mức duy nhất giữ được nốt quãng tám trong power chord (E2+B2+E3), vì basic-pitch báo nốt đó yếu và `frame_threshold` 0.5 làm rơi nó. Bài toàn hợp âm thì thử `--sensitivity high`.
 
 ### 2.1 Lọc hoạ âm (tùy chọn)
 
@@ -194,7 +213,7 @@ Mỗi file được ghi ra `<tên>.tmp-<pid>.<đuôi>` trước, rồi `os.repla
 | Nhận nốt cho 12 s audio | dưới 1 s |
 | Phách, lượng tử hoá, gán tab, xuất file | dưới 1 s |
 
-Độ chính xác trên dữ liệu thật (Note F1 trên GuitarSet, mục tiêu ≥ 0.70) sẽ được đo ở task T11 của [plan](plans/plan-mp3-to-guitarpro.md).
+Độ chính xác: Note F1 0.89 trên bài Afternoon Tea ở mức `normal` (mục tiêu ≥ 0.70), xem [báo cáo eval](reports/eval-2026-11-14-g1.md) và mục 2.0.
 
 ## Tài liệu tham khảo
 
