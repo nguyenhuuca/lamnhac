@@ -39,6 +39,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="normal",
         help="note detection: high catches more notes (and more junk), low fewer",
     )
+    c.add_argument(
+        "--pickup",
+        type=float,
+        help="beats (of the --time denominator) before bar 1, e.g. 0, 1, 1.5 (default: detect)",
+    )
     c.add_argument("--force", action="store_true", help="overwrite existing outputs")
     c.add_argument("-v", "--verbose", action="store_true", help="DEBUG logging, tracebacks")
     return parser
@@ -59,6 +64,19 @@ def _parse_time(text: str) -> TimeSignature:
     return TimeSignature(int(num), int(den))
 
 
+def _parse_pickup(beats: float | None, time_sig: TimeSignature) -> int | None:
+    """Pickup length in beats of the denominator note -> slots (sixteenths)."""
+    if beats is None:
+        return None
+    slots = beats * 16 / time_sig.denominator
+    if not (0 <= beats < time_sig.numerator and abs(slots - round(slots)) < 1e-9):
+        raise ValueError(
+            f"--pickup phải trong khoảng 0..{time_sig.numerator} (không gồm "
+            f"{time_sig.numerator}) và là bội của một nốt móc kép, nhận được {beats:g}"
+        )
+    return round(slots)
+
+
 def _options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> ConvertOptions:
     try:
         if args.tempo is not None and not 30 <= args.tempo <= 300:  # also rejects NaN
@@ -68,6 +86,7 @@ def _options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Conve
         formats = _parse_formats(args.format)
         time_sig = _parse_time(args.time)
         tuning = parse_tuning(args.tuning)
+        pickup_slots = _parse_pickup(args.pickup, time_sig)
     except ValueError as exc:
         parser.error(str(exc))  # exits with 2
     input_path: Path = args.input
@@ -82,6 +101,7 @@ def _options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Conve
         max_fret=args.max_fret,
         filter_harmonics=args.filter_harmonics,
         sensitivity=args.sensitivity,
+        pickup_slots=pickup_slots,
     )
 
 

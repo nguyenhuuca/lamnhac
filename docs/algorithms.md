@@ -109,6 +109,16 @@ Tại sao lấy **max** mà không cộng: phiên bản đầu cộng velocity c
 
 Nếu có nốt nằm trước phách 1 đầu tiên, lamnhac thêm một **ô pickup (đảo phách)** ở đầu bài và bù bằng dấu lặng.
 
+**Khi đoán sai: `--pickup N` (B8a).** Nhạc fingerstyle thường không nhấn rõ phách 1, nên cách chấm điểm trên có thể chọn nhầm. Ví dụ bài *Nhớ ơi* (6/8): tool đặt sai vạch ô nhịp, 0% nốt nằm đúng vị trí trong ô. Khi người dùng cho biết nốt đầu tiên nằm trước phách 1 bao nhiêu phách, lamnhac:
+1. lấy thời điểm nốt đầu tiên, cộng N phách tính bằng **giây** theo khoảng phách trung vị;
+2. đổi thời điểm đó ra vị trí trên lưới rồi **làm tròn về phách gần nhất**.
+
+Hai chi tiết này sửa hai lỗi đã gặp khi đo:
+- lưới phách vài giây đầu bị méo, vì beat tracker chưa bắt nhịp kịp, nên đếm theo slot từ nốt đầu sẽ sai;
+- nốt bass đầu được nhận trễ khoảng 0.1 s, nên nếu không làm tròn thì cả bài lệch đi một ô móc kép.
+
+Sau khi sửa, 96% nốt bài *Nhớ ơi* nằm đúng vị trí trong ô.
+
 ## 4. Lượng tử hoá: từ giây sang ô lưới (`rhythm.quantize`, B7, B9–B10)
 
 ### 4.1 Lưới bám theo phách (beat-synchronous grid)

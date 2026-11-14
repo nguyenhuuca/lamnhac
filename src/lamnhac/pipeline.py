@@ -64,7 +64,7 @@ def convert(opts: ConvertOptions, progress: Callable[[str], None]) -> ConvertRes
     done("transcribe", t)
 
     t = step(3, "phân tích nhịp")
-    info = rhythm.analyze(clip, notes, opts.tempo, opts.time_signature)
+    info = rhythm.analyze(clip, notes, opts.tempo, opts.time_signature, opts.pickup_slots)
     done("analyze", t)
     if info.tempo_source == "detected":
         progress(f"tempo đoán được: {round(info.tempo_bpm)} BPM (dùng --tempo để sửa)")

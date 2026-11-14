@@ -153,6 +153,11 @@ def test_gp5_writer_failure_exit_five_keeps_musicxml(
         (["--filter-harmonics"], "filter_harmonics", True),
         (["--sensitivity", "high"], "sensitivity", "high"),
         (["--sensitivity", "low"], "sensitivity", "low"),
+        (["--pickup", "0"], "pickup_slots", 0),
+        (["--pickup", "1.5", "--time", "3/4"], "pickup_slots", 6),
+        (["--pickup", "1", "--time", "6/8"], "pickup_slots", 2),
+        (["--pickup", "0.5", "--time", "6/8"], "pickup_slots", 1),
+        (["--pickup", "1", "--time", "2/2"], "pickup_slots", 8),
         (["--format", "gp5"], "formats", frozenset({"gp5"})),
     ],
 )
@@ -178,6 +183,7 @@ def test_default_options_and_out_dir(monkeypatch: pytest.MonkeyPatch) -> None:
     assert opts.max_fret == 24
     assert opts.filter_harmonics is False
     assert opts.sensitivity == "normal"
+    assert opts.pickup_slots is None
     assert opts.formats == frozenset({"gp5", "musicxml"})
 
 
@@ -251,3 +257,18 @@ def test_bad_max_fret_exit_two(value: str, tmp_path: Path) -> None:
 
 def test_bad_sensitivity_exit_two(tmp_path: Path) -> None:
     assert main(["convert", str(SCALE), "-o", str(tmp_path), "--sensitivity", "max"]) == 2
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ["--pickup", "4"],  # a whole 4/4 bar
+        ["--pickup", "-1"],
+        ["--pickup", "0.3"],  # not a multiple of a sixteenth
+        ["--pickup", "0.25", "--time", "6/8"],  # a 32nd note
+        ["--pickup", "nan"],
+        ["--pickup", "abc"],
+    ],
+)
+def test_bad_pickup_exit_two(extra: list[str], tmp_path: Path) -> None:
+    assert main(["convert", str(SCALE), "-o", str(tmp_path), *extra]) == 2

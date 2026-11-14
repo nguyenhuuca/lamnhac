@@ -59,6 +59,7 @@ Lần chạy đầu mất thêm khoảng 10 giây để nạp model TensorFlow. 
 | `--max-fret N` | 24 | Chỉ dùng phím 0..N khi gán tab. Nốt không bấm được trong vùng đó bị bỏ, kèm cảnh báo. Hữu ích khi biết người chơi chỉ ở vài ngăn đầu, và cũng loại được phần lớn hoạ âm |
 | `--filter-harmonics` | tắt | Bỏ các nốt giả do hoạ âm (cao hơn 1–3 quãng tám, nhỏ hơn rõ rệt). Tốt cho câu lead đánh từng nốt, nhưng **có thể bỏ nhầm quãng tám thật** trong hợp âm |
 | `--sensitivity LEVEL` | `normal` | Độ nhạy nhận nốt: `low`, `normal` hoặc `high`. Ra nhiều nốt thừa thì dùng `low`; sót nốt, hoặc bài nhiều hợp âm có quãng tám, thì dùng `high` |
+| `--pickup N` | tự đoán | Số phách nằm **trước** ô nhịp 1 (nốt lấy đà). Phách tính theo mẫu số của `--time`: 4/4 là nốt đen, 6/8 là nốt móc đơn. N từ 0 đến tử số − 1, nhận nửa phách như `1.5`. `0` nghĩa là nốt đầu ở đúng phách 1. Dùng khi vạch ô nhịp bị lệch |
 | `--force` | tắt | Cho phép ghi đè file đã có. Nếu không bật, lệnh sẽ dừng **trước khi** xử lý |
 | `-v, --verbose` | tắt | In log chi tiết và stack trace khi có lỗi |
 
@@ -80,6 +81,10 @@ uv run lamnhac convert bai.mp3 --filter-harmonics
 # Ra quá nhiều nốt thừa: giảm độ nhạy. Sót nốt: tăng độ nhạy
 uv run lamnhac convert bai.mp3 --sensitivity low
 uv run lamnhac convert bai.mp3 --sensitivity high
+
+# Vạch ô nhịp bị lệch: nốt đầu ở phách 1 (6/8), hoặc có 1.5 phách lấy đà (3/4)
+uv run lamnhac convert bai.mp3 --time 6/8 --pickup 0
+uv run lamnhac convert bai.mp3 --time 3/4 --pickup 1.5
 
 # Chỉ cần file .gp5
 uv run lamnhac convert bai.mp3 --format gp5
@@ -111,7 +116,8 @@ Hữu ích khi gọi tool từ script khác. stdout chỉ in đường dẫn cá
 - Chỉ có **một bè**: nốt đang ngân bị cắt khi có nốt mới bắt đầu.
 - Lưới nhỏ nhất là **nốt móc kép (1/16)**. Chưa có chùm ba, và cả bài dùng một tempo duy nhất.
 - Không nhận kỹ thuật bend, slide, hammer-on, pull-off hay vibrato.
-- Phách mạnh được đoán theo nốt được nhấn mạnh nhất. Nếu ô nhịp bị lệch, hãy sửa trong Guitar Pro.
+- Phách mạnh được đoán theo nốt được nhấn mạnh nhất. Nếu ô nhịp bị lệch, dùng `--pickup` (cách tìm N: nốt đầu ở phách k thì N = tử số − (k − 1); ở phách 1 thì N = 0).
+- Tool không tự nhận ra số chỉ nhịp: bài 3/4 hay 6/8 cần truyền `--time`.
 - Thường có nốt thừa do **hoạ âm** (tần số gấp 2, 3, 4… lần của nốt thật, sinh ra từ chính dây vừa gảy). Dùng `--max-fret` hoặc `--filter-harmonics` để giảm, xem [docs/algorithms.md](algorithms.md#21-lọc-hoạ-âm-tuỳ-chọn).
 - Ở mức `normal`, nốt quãng tám trong hợp âm (ví dụ E3 của power chord E2+B2+E3) có thể bị bỏ. Bài nhiều hợp âm thì thử `--sensitivity high`.
 - File đầu vào giới hạn 50 MB và 10 phút.

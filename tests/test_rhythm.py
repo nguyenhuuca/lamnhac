@@ -18,6 +18,7 @@ from lamnhac.models import (
     TimeSignature,
 )
 from lamnhac.rhythm import (
+    _downbeat_from_pickup,
     _fold_tempo,
     _pick_downbeat,
     align_beats,
@@ -383,3 +384,42 @@ def test_downbeat_tie_break_uses_bar_phase() -> None:
     beats = [0.5 * i for i in range(20)]
     notes = [NoteEvent(0.5 * b, 0.5 * b + 0.4, 60, 0.8) for b in range(9, 17)]
     assert _pick_downbeat(beats, notes, 16) == 4
+
+
+# --- pickup (B8a) --------------------------------------------------------------
+
+
+def test_pickup_zero_puts_first_note_on_bar_one() -> None:
+    beats = _even()  # 0.5 s per beat, 0.125 s per slot
+    notes = [_note(1.0, 1.4), _note(1.5, 1.9)]  # slot 8 and 12
+    assert _downbeat_from_pickup(beats, notes, 16, 0) == 8
+
+
+def test_pickup_late_first_onset_still_snaps_to_beat() -> None:
+    # First onset detected 0.1 s late (0.8 slot): bar 1 stays on the beat, not a sixteenth later.
+    notes = [_note(1.1, 1.4), _note(1.5, 1.9)]
+    assert _downbeat_from_pickup(_even(), notes, 16, 0) == 8
+
+
+def test_pickup_counted_in_seconds_not_in_distorted_early_grid() -> None:
+    # Early beats too close together (tracker warming up); the median interval is 0.5 s.
+    beats = [0.0, 0.3, 0.6, *[1.0 + 0.5 * i for i in range(40)]]
+    notes = [_note(0.0, 0.2), _note(1.5, 1.8)]
+    # 6 slots of pickup = 0.75 s after the first note -> 0.75 s, grid position ~9.5 -> beat 8
+    assert _downbeat_from_pickup(beats, notes, 12, 6) == 8
+
+
+def test_pickup_one_and_a_half_beats_in_three_four() -> None:
+    notes = [_note(0.75, 0.9), _note(1.0, 1.2), _note(1.25, 1.4), _note(1.5, 1.9)]
+    info = analyze(_clicks(120, 8), notes, 120.0, TimeSignature(3, 4), pickup_slots=6)
+    first = next(s for s in quantize(notes, info).slots if s.notes)
+    assert first.start == 6  # pickup bar: 6 slots of rest, then the 3 eighth notes
+
+
+def test_pickup_must_be_shorter_than_a_bar() -> None:
+    with pytest.raises(ProcessingError):
+        analyze(_clicks(120, 4), [_note(0.0, 0.2)], 120.0, T44, pickup_slots=16)
+
+
+def test_pickup_with_no_notes_is_zero() -> None:
+    assert _downbeat_from_pickup(_even(), [], 16, 4) == 0

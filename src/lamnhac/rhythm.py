@@ -123,11 +123,29 @@ def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots
     return min(tied, key=lambda o: (phase_distance(o), o))
 
 
+def _downbeat_from_pickup(
+    beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots: int, pickup_slots: int
+) -> int:
+    """Downbeat slot when the user says how far before bar 1 the first note is (B8a).
+
+    The pickup is added in seconds, not grid slots: the tracked beats are often irregular for
+    the first few seconds. The result snaps to a candidate beat, as in B8, so a first onset
+    detected a little late does not shift the whole score by a sixteenth.
+    """
+    if not notes:
+        return 0
+    seconds_per_slot = float(np.median(np.diff(beats))) / SLOTS_PER_BEAT
+    downbeat_s = min(n.onset_s for n in notes) + pickup_slots * seconds_per_slot
+    step = 4 if bar_slots % 4 == 0 else 2
+    return (step * _round_half_up(grid_position(downbeat_s, beats) / step)) % bar_slots
+
+
 def analyze(
     clip: AudioClip,
     notes: Sequence[NoteEvent],
     tempo: float | None,
     time_sig: TimeSignature,
+    pickup_slots: int | None = None,
 ) -> RhythmInfo:
     if clip.samples.size == 0:
         raise ProcessingError("không phân tích được nhịp: audio rỗng")
@@ -151,14 +169,18 @@ def analyze(
     beats = list(align_beats(beats, [n.onset_s for n in notes]))
 
     bar_slots = time_sig.bar_slots
+    if pickup_slots is not None and not 0 <= pickup_slots < bar_slots:
+        raise ProcessingError("pickup phải ngắn hơn một ô nhịp")
+
+    def downbeat(grid: Sequence[float]) -> int:
+        if pickup_slots is None:
+            return _pick_downbeat(grid, notes, bar_slots)
+        return _downbeat_from_pickup(grid, notes, bar_slots, pickup_slots)
+
     if tempo is not None:
-        return RhythmInfo(
-            float(tempo), tuple(beats), _pick_downbeat(beats, notes, bar_slots), time_sig, "user"
-        )
+        return RhythmInfo(float(tempo), tuple(beats), downbeat(beats), time_sig, "user")
     bpm, beats = _fold_tempo(60.0 / float(np.median(np.diff(beats))), beats)
-    return RhythmInfo(
-        bpm, tuple(beats), _pick_downbeat(beats, notes, bar_slots), time_sig, "detected"
-    )
+    return RhythmInfo(bpm, tuple(beats), downbeat(beats), time_sig, "detected")
 
 
 def _round_half_up(x: float) -> int:

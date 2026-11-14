@@ -178,6 +178,7 @@ class ConvertOptions:
     max_fret: int = 24
     filter_harmonics: bool = False  # B4a is opt-in: it drops real octaves in chords
     sensitivity: Sensitivity = "normal"
+    pickup_slots: int | None = None  # slots before bar 1; None = detect the downbeat (B8)
 
     def __post_init__(self) -> None:
         if not 0 <= self.max_fret <= 24:

@@ -50,6 +50,7 @@ Bằng chứng: nhu cầu của chính owner (người dùng đầu tiên). Repo
 | R13 | Lọc hoạ âm: bỏ nốt giả do hoạ âm của một nốt trầm hơn | should | Given bản thu có dây trầm buông ngân, when convert, then hoạ âm (+12, +19, +24, +28, +31, +36 nửa cung, cùng lúc, nhỏ hơn rõ rệt) không thành nốt riêng, còn quãng tám thật trong power chord vẫn giữ; bật bằng `--filter-harmonics` (mặc định tắt, vì có thể bỏ nhầm quãng tám thật trong hợp âm) |
 | R14 | Giới hạn vùng phím `--max-fret N` | should | Given `--max-fret 5`, when convert, then mọi nốt trong tab có phím ≤ 5, nốt không bấm được trong vùng đó bị bỏ kèm cảnh báo |
 | R15 | Chỉnh độ nhạy nhận nốt `--sensitivity low\|normal\|high` | should | Given bản thu bị ra thừa hoặc sót nốt, when convert với `low` hoặc `high`, then số nốt giảm hoặc tăng tương ứng; mặc định `normal` đạt G1 trên bộ eval |
+| R16 | Khai đảo phách `--pickup N` (số phách trước ô nhịp 1) | should | Given bài 6/8 tool đoán sai phách 1, when convert với `--pickup 0`, then nốt đầu ở phách 1 ô nhịp 1 và ≥ 90% nốt đúng vị trí trong ô so với tab chuẩn |
 
 ## Constraints and Risks
 
@@ -77,4 +78,5 @@ Bằng chứng: nhu cầu của chính owner (người dùng đầu tiên). Repo
 
 - 2026-11-13: R13, R14 thêm sau khi chạy thử bản thu thật (testgod.mp3) thấy dư hoạ âm và người chơi chỉ dùng vài ngăn đầu.
 - 2026-11-13: R13 chuyển sang opt-in sau khi test power chord cho thấy lọc theo độ to bỏ nhầm quãng tám thật.
+- 2026-11-14: R16 thêm theo đề xuất của owner (cho nhập vị trí nốt đầu để dễ nhận nhịp).
 - 2026-11-14: R15 thêm sau eval G1 trên bài có tab chuẩn: ngưỡng cũ cho F1 0.58, mặc định mới 0.89. Câu hỏi bộ test G1 đã có câu trả lời: owner cung cấp bản thu kèm `.gp5` chuẩn.
