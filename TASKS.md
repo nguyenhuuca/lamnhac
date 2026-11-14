@@ -23,12 +23,12 @@
 ## Chords from song ([plan](docs/plans/plan-chords-from-song.md))
 
 - [x] C-T1 Refactor rhythm to `OnsetLike` (no behavior change) (0e34d3a)
-- [~] C-T2 Models, `rhythm.onsets`, `time_of_slot`, `chord_shapes`
-- [ ] C-T3 `chords.recognize` (chroma, scores, Viterbi)
-- [ ] C-T4 Key, chord names, capo
-- [ ] C-T5 Bar start from chord changes + tab building
-- [ ] C-T6 `.gp5` diagrams + key, `.chords.txt`
-- [ ] C-T7 `pipeline.chords` + CLI subcommand
+- [x] C-T2 Models, `rhythm.onsets`, `time_of_slot`, `chord_shapes` (753d2d0)
+- [x] C-T3 `chords.recognize` (chroma, scores, Viterbi) (e8e2814)
+- [x] C-T4 Key, chord names, capo (959efdd)
+- [x] C-T5 Bar start from chord changes + tab building (fc7bfa8)
+- [x] C-T6 `.gp5` diagrams + key, `.chords.txt` (6279ed6, b6454d6)
+- [~] C-T7 `pipeline.chords` + CLI subcommand
 - [ ] C-T8 Synthetic chord fixture + integration test
 - [x] C-T9 Answer parser + metrics (`tests/eval/answers.py`) (12c0d79)
 - [ ] C-T10 Chord eval (`pytest -m eval`)

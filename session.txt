@@ -1,8 +1,8 @@
 task: lamnhac chords (chord chart from a full song)
 status: in_progress
-progress: 15
-done: PRD 04eb755; spec 22dd620; plan 29d3361; C-T9 12c0d79; C-T1 0e34d3a
-doing: C-T2 models, onsets, time_of_slot, chord_shapes
-next: C-T2; C-T3; C-T4; C-T5; C-T6; C-T7; C-T8; C-T10; C-T11; C-T12 needs owner songs
+progress: 55
+done: C-T1 0e34d3a; C-T2 753d2d0; C-T3 e8e2814; C-T4 959efdd; C-T5 fc7bfa8; C-T6 b6454d6; C-T9 12c0d79
+doing: C-T7 pipeline.chords + CLI
+next: C-T7; C-T8; C-T10; C-T11; review; C-T12 needs owner songs
 plan: docs/plans/plan-chords-from-song.md
-updated: 2026-11-14 13:01
+updated: 2026-11-14 13:13
