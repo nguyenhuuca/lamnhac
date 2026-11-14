@@ -1,7 +1,7 @@
 task: MP3 -> Guitar Pro CLI (lamnhac)
 status: in_progress
-progress: 95
-done: T1-T10 c185dc5; review fixes 1632dd8; T12 70ed456; docs site 05c0b81; T11 G1 eval F1 0.89 c073599; T13 --sensitivity c073599
-next: T14 eval more real recordings + string/fret match + G3 3-min song; push c073599 (needs owner yes)
+progress: 96
+done: T1-T10 c185dc5; T12 70ed456; docs site 05c0b81; T11 G1 eval F1 0.89 c073599; T13 --sensitivity c073599; tab low-position cost e2b6e4b; T15 --pickup 0ae3a40
+next: T14 eval real (mic/pickup) recordings + G3 3-min song
 plan: docs/plans/plan-mp3-to-guitarpro.md
-updated: 2026-11-14 11:07
+updated: 2026-11-14 11:22

@@ -14,5 +14,7 @@
 - [x] T10 `export_gp5` + pipeline wiring (c185dc5)
 - [x] T11 Eval G1 + report (G3 chưa đo: chưa có bài 3 phút có tab) (c073599)
 - [x] T13 `--sensitivity` + new default thresholds (c073599)
+- [x] T13b tab cost prefers low positions (e2b6e4b)
+- [x] T15 `--pickup` (B8a, R16) (0ae3a40)
 - [ ] T14 Eval thêm bản thu guitar thật, độ khớp dây/phím, G3 bài 3 phút
 - [x] T12 Harmonic filter (B4a) + `--max-fret` (B12) (70ed456)
