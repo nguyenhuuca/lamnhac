@@ -83,6 +83,8 @@ nav:
       - "PRD hợp âm": prd/PRD-chords-from-song.md
       - Spec: specs/spec-mp3-to-guitarpro.md
       - Sequence diagrams: sequence/sequence-mp3-to-guitarpro.md
+      - "Spec hợp âm": specs/spec-chords-from-song.md
+      - "Sequence hợp âm": sequence/sequence-chords-from-song.md
       - "ADR-0001 Thư viện nhận nốt và xuất file": adr/0001-transcription-and-export-libraries.md
   - Dự án:
       - Plan: plans/plan-mp3-to-guitarpro.md

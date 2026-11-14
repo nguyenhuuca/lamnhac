@@ -55,7 +55,7 @@ Bằng chứng: nhu cầu của owner, nêu ngày 2026-11-14 sau khi dùng `conv
 | R7 | Dùng chung các tuỳ chọn và hành vi của `convert`: `-o`, `--force`, `-v`, kiểm tra đầu vào (≤ 50 MB, ≤ 10 phút), ghi file an toàn, mã thoát 0–5, báo tiến độ, chạy offline | must | Given file đầu ra đã có và không có `--force`, when chạy, then thoát mã 5 trước khi xử lý; không có kết nối mạng nào lúc chạy |
 | R8 | In ra chuỗi hợp âm dạng chữ theo ô nhịp, ví dụ `| C | G | Am | F |`, ra stderr, và ghi `--format txt` thành `<tên>.chords.txt` | should | Given `--format gp5,txt`, when chạy, then có thêm file `.txt` mỗi dòng 4 ô nhịp |
 | R9 | `--capo N` (0–11): giữ âm thanh, nhưng tên và thế bấm hợp âm tính cho người kẹp capo ở ngăn N | could | Given bài ở giọng Đô trưởng và `--capo 3`, when chạy, then hợp âm C hiện là A (thế bấm A, kẹp ngăn 3) |
-| R10 | Bộ đo `pytest -m eval` cho hợp âm: đọc các cặp `<bài>.mp3` + `<bài>.chords.txt` (hợp âm owner chép) trong `tests/fixtures/real/`, in độ khớp thường và độ khớp sau khi dịch giọng | must | Given 3 bài có đáp án, when chạy eval, then in 2 con số cho mỗi bài và test fail nếu độ khớp thường dưới 0.70 |
+| R10 | Bộ đo `pytest -m eval` cho hợp âm: đọc các cặp `<bài>.mp3` + `<bài>.hopam.txt` (hợp âm owner chép) trong `tests/fixtures/real/`, in độ khớp thường và độ khớp sau khi dịch giọng | must | Given 3 bài có đáp án, when chạy eval, then in 2 con số cho mỗi bài và test fail nếu độ khớp thường dưới 0.70 |
 
 ## Constraints and Risks
 
@@ -72,12 +72,13 @@ Bằng chứng: nhu cầu của owner, nêu ngày 2026-11-14 sau khi dùng `conv
 
 ## Open Questions
 
-- Owner chuẩn bị 3–5 bài cho bộ test: MP3 cùng file `<bài>.chords.txt` chép hợp âm theo thứ tự. **Đã chốt 2026-11-14:** mỗi dòng một đoạn, hợp âm cách nhau bằng dấu cách, không cần đánh dấu ô nhịp. (owner)
+- Owner chuẩn bị 3–5 bài cho bộ test: MP3 cùng file `<bài>.hopam.txt` chép hợp âm theo thứ tự. **Đã chốt 2026-11-14:** mỗi dòng một đoạn, hợp âm cách nhau bằng dấu cách, không cần đánh dấu ô nhịp. (owner)
 - ~~Gộp vào `convert` hay để lệnh riêng?~~ **Đã chốt 2026-11-14:** lệnh riêng `lamnhac chords` (R1).
 - Mục tiêu G1 0.70 và G4 60 s là giả định, owner đồng ý dùng tạm (2026-11-14). Chỉnh lại sau lần đo đầu. (owner + dev)
 - Cách nhận hợp âm: mẫu chroma kèm làm mượt bằng HMM/Viterbi dùng librosa, hay một model học sâu? Quyết định ở bước spec, kèm ADR nếu thêm thư viện. (dev)
 
 ## Changelog
 
+- 2026-11-14: Spec review: file đáp án đổi tên thành `<bài>.hopam.txt`, vì `<bài>.chords.txt` trùng tên file tool ghi ra và có thể bị ghi đè.
 - 2026-11-14: Owner duyệt PRD; các câu hỏi mở về định dạng đáp án, lệnh riêng và mục tiêu tạm đã chốt theo đề xuất.
 - 2026-11-14: Draft từ `/scope`. Owner chọn: chỉ trưởng và thứ; mỗi phách gảy một lần, có tên và sơ đồ hợp âm; chưa làm giai điệu; đo bằng bài thật cộng hợp âm trên lời.
