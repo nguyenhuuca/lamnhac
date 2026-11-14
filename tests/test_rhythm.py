@@ -22,6 +22,7 @@ from lamnhac.rhythm import (
     _fold_tempo,
     _pick_downbeat,
     align_beats,
+    align_beats_locally,
     analyze,
     grid_position,
     quantize,
@@ -423,3 +424,35 @@ def test_pickup_must_be_shorter_than_a_bar() -> None:
 
 def test_pickup_with_no_notes_is_zero() -> None:
     assert _downbeat_from_pickup(_even(), [], 16, 4) == 0
+
+
+# --- local beat alignment (B7b) --------------------------------------------------------
+
+
+def test_local_align_fixes_drift_after_held_note() -> None:
+    # Beats from 10 on are a sixteenth (0.125 s) late, as after a long held note.
+    true = _even(20)
+    tracked = [b + (0.125 if i >= 10 else 0.0) for i, b in enumerate(true)]
+    out = align_beats_locally(tracked, true)
+    assert all(abs(a - b) < 1e-9 for a, b in zip(out[:6], true[:6], strict=True))
+    assert all(abs(a - b) < 1e-9 for a, b in zip(out[14:], true[14:], strict=True))
+
+
+def test_local_align_needs_three_onsets_nearby() -> None:
+    beats = _even(20)
+    out = align_beats_locally(beats, [10.1, 10.6])  # two onsets, 0.1 s after beats 20/21
+    assert list(out) == beats
+
+
+def test_local_align_ignores_onsets_between_beats() -> None:
+    beats = _even(20)
+    offbeats = [b + 0.25 for b in beats]  # eighth notes on the "and": not a beat offset
+    assert list(align_beats_locally(beats, offbeats)) == beats
+
+
+def test_local_align_clamps_and_stays_increasing() -> None:
+    beats = _even(20)
+    onsets = [b + 0.12 for b in beats]  # within 1/4 interval (0.125)
+    out = align_beats_locally(beats, onsets)
+    assert all(abs(o - b - 0.12) < 1e-9 for o, b in zip(out, beats, strict=True))
+    assert all(b > a for a, b in pairwise(out))

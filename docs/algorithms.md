@@ -97,6 +97,12 @@ Khi người dùng nhập `--tempo`, lamnhac đưa giá trị đó vào làm `st
 
 Dùng trung vị thay vì trung bình để vài nốt thừa hoặc nốt đảo phách không kéo lệch kết quả. Trên file mẫu 97 BPM, sai số trung bình giảm xuống còn khoảng 6 ms.
 
+**Căn từng phách (B7b).** Dịch cả bài một lượng chung là chưa đủ. Bài *Intro Lemon tree* có ô 8 là một nốt tròn ngân 4 phách. Không có nốt mới nào để bám, nên beat tracker bắt lại nhịp trễ một ô móc kép, và cả ô 9–11 lệch theo. Vì vậy sau B7a, lamnhac căn **từng phách**:
+- mỗi phách lấy các nốt gắn với nó và với 4 phách hai bên;
+- nếu có ít nhất 3 nốt, phách dịch theo trung vị độ lệch, tối đa ±1/4 phách.
+
+Ở đoạn nhịp đều, các độ lệch này gần 0 nên phách không đổi. Ở chỗ bị trễ, phách được kéo về đúng nốt. Kết quả: số nốt đúng vị trí trong ô nhịp tăng từ 76% lên 99%.
+
 ### 3.3 Chọn phách mạnh (B8)
 
 Beat tracker chỉ biết *phách*, không biết phách nào là **phách 1 của ô nhịp**. lamnhac thử lần lượt các vị trí bắt đầu ô nhịp `o` trên lưới slot. Mỗi ứng viên cách nhau một phách đen (4 slot); riêng các nhịp có độ dài ô không chia hết cho 4, như 3/8 hay 5/8, thì thử cách nhau 2 slot. Với mỗi ứng viên, xét các vị trí `o, o + L, o + 2L…` (L = số slot mỗi ô nhịp) và tính điểm:

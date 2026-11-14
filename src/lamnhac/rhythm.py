@@ -25,6 +25,8 @@ SLOTS_PER_BEAT = 4
 PICKUP_TOLERANCE = 0.5  # slots
 DOWNBEAT_WINDOW = 1.0  # slots, B8
 MIN_LAG_SAMPLES = 4  # B7a
+LOCAL_WINDOW_BEATS = 4  # B7b: onsets attached to beats within +-4 beats
+LOCAL_MIN_SAMPLES = 3  # B7b
 _EPS = 1e-9
 
 
@@ -90,6 +92,33 @@ def align_beats(beat_times: Sequence[float], onsets: Sequence[float]) -> tuple[f
     limit = interval / 8
     shift = float(np.clip(np.median(near), -limit, limit))
     return tuple(float(b) + shift for b in beats)
+
+
+def align_beats_locally(beat_times: Sequence[float], onsets: Sequence[float]) -> tuple[float, ...]:
+    """Pull each beat onto the onsets around it (B7b).
+
+    The tracker can lose phase over a long held note and come back a sixteenth late; one global
+    shift (B7a) cannot fix that. Each onset is attached to its nearest beat when within 1/4
+    interval; beat i moves by the median offset of the onsets attached to beats i-4..i+4, if
+    there are at least 3, clamped to +-1/4 interval. Beats stay at least 1/4 interval apart.
+    """
+    beats = np.asarray(beat_times, dtype=np.float64)
+    if beats.size < 2 or len(onsets) == 0:
+        return tuple(float(b) for b in beats)
+    interval = float(np.median(np.diff(beats)))
+    on = np.asarray(onsets, dtype=np.float64)
+    nearest = np.abs(on[:, None] - beats[None, :]).argmin(axis=1)
+    offsets = on - beats[nearest]
+    close = np.abs(offsets) <= interval / 4 + _EPS
+    out = beats.copy()
+    for i in range(beats.size):
+        chosen = close & (np.abs(nearest - i) <= LOCAL_WINDOW_BEATS)
+        if int(chosen.sum()) >= LOCAL_MIN_SAMPLES:
+            limit = interval / 4
+            out[i] += float(np.clip(np.median(offsets[chosen]), -limit, limit))
+    for i in range(1, out.size):
+        out[i] = max(out[i], out[i - 1] + interval / 4)
+    return tuple(float(b) for b in out)
 
 
 def _pick_downbeat(beats: Sequence[float], notes: Sequence[NoteEvent], bar_slots: int) -> int:
@@ -166,7 +195,8 @@ def analyze(
         beats = _even_beats(first, tempo or DEFAULT_TEMPO, clip.duration_s)
     # applied to the fallback grid too: it is anchored on the first onset, so the median
     # offset is ~0 and the shift is harmless
-    beats = list(align_beats(beats, [n.onset_s for n in notes]))
+    onsets = [n.onset_s for n in notes]
+    beats = list(align_beats_locally(align_beats(beats, onsets), onsets))
 
     bar_slots = time_sig.bar_slots
     if pickup_slots is not None and not 0 <= pickup_slots < bar_slots:
