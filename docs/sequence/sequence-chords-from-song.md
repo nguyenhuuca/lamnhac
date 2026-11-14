@@ -3,7 +3,7 @@
 - **PRD:** [PRD-chords-from-song](../prd/PRD-chords-from-song.md)
 - **ADR:** — (dùng lại thư viện của [ADR-0001](../adr/0001-transcription-and-export-libraries.md))
 - **Spec:** [spec-chords-from-song](../specs/spec-chords-from-song.md)
-- **Status:** Draft
+- **Status:** Approved (2026-11-14)
 
 ## 1. Đường chính: `lamnhac chords bai.mp3 --format gp5,txt`
 

@@ -1,6 +1,6 @@
 # Spec: Vòng hợp âm từ bài hát → Guitar Pro
 
-**Status:** Draft (rev 3, review lần 2 approve) · **PRD:** docs/prd/PRD-chords-from-song.md · **ADRs:** không cần ADR mới (chỉ dùng librosa, numpy, PyGuitarPro đã có; ADR-0001 vẫn áp dụng) · **Date:** 2026-11-14
+**Status:** Approved (2026-11-14, rev 3) · **PRD:** docs/prd/PRD-chords-from-song.md · **ADRs:** không cần ADR mới (chỉ dùng librosa, numpy, PyGuitarPro đã có; ADR-0001 vẫn áp dụng) · **Date:** 2026-11-14
 
 ## Overview
 
@@ -131,7 +131,7 @@ Các hằng số `BASS_WEIGHT`, `N_SCORE`, `TEMPERATURE`, `P_STAY` là điểm k
     - Điểm(o) = số lần đổi hợp âm có slot bắt đầu `≡ o (mod bar_slots)`.
     - Ứng viên tốt nhất chỉ thay `downbeat_slot` của B8 khi điểm của nó **lớn hơn ứng viên thứ hai ít nhất 20%** và có ít nhất 4 lần đổi. Nếu không thì giữ B8.
     - Lý do: hợp âm gần như luôn đổi ở phách 1, nhưng với hai hợp âm mỗi ô, phách 3 cũng có nhiều lần đổi. Ngưỡng 20% giúp tránh chọn nhầm; khi hai ứng viên sát nhau, tool quay về B8.
-    - *Đây là phần thêm so với "tính như convert" của R6. Owner xác nhận khi duyệt spec.*
+    - *Đây là phần thêm so với "tính như convert" của R6. Owner đã xác nhận khi duyệt spec (2026-11-14).*
   - `bar1_slot` tính đúng như `rhythm.quantize`:
     - bắt đầu từ `downbeat_slot`;
     - lùi từng `bar_slots` cho tới khi `bar1_slot ≤ slot của đơn vị có hợp âm đầu tiên + 0.5`. Đây là ô pickup.
