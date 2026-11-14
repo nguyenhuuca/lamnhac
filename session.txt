@@ -1,7 +1,7 @@
 task: MP3 -> Guitar Pro CLI (lamnhac)
 status: in_progress
-progress: 93
-done: T1-T10 c185dc5; review fixes 1632dd8; T12 70ed456; docs site 05c0b81 pushed, Pages live
-next: T11 eval (needs GuitarSet); owner compares scratchpad/testgod_* in Guitar Pro 8; optional CI for gates
+progress: 95
+done: T1-T10 c185dc5; review fixes 1632dd8; T12 70ed456; docs site 05c0b81; T11 G1 eval F1 0.89 c073599; T13 --sensitivity c073599
+next: T14 eval more real recordings + string/fret match + G3 3-min song; push c073599 (needs owner yes)
 plan: docs/plans/plan-mp3-to-guitarpro.md
-updated: 2026-11-13 23:35
+updated: 2026-11-14 11:07
