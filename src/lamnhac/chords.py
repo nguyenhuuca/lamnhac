@@ -1,13 +1,14 @@
 """Chord recognition per strum unit: chroma, template scores, Viterbi smoothing (spec C7-C10a)."""
 
 import logging
+from collections.abc import Sequence
 
 import librosa
 import numpy as np
 import numpy.typing as npt
 
 from lamnhac.errors import ProcessingError
-from lamnhac.models import NO_CHORD, AudioClip, ChordLabel, RhythmInfo
+from lamnhac.models import NO_CHORD, AudioClip, ChordLabel, MusicKey, RhythmInfo
 from lamnhac.rhythm import time_of_slot
 
 log = logging.getLogger("lamnhac")
@@ -28,6 +29,9 @@ _N_INDEX = 24
 _NO_CHORD_MESSAGE = "không nhận được hợp âm nào — bài có nhạc đệm không?"
 
 FloatArray = npt.NDArray[np.float64]
+
+_KK_MAJOR = (6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88)
+_KK_MINOR = (6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17)
 
 
 def unit_boundaries(rhythm: RhythmInfo, unit_slots: int, duration_s: float) -> list[float]:
@@ -164,3 +168,27 @@ def recognize(clip: AudioClip, rhythm: RhythmInfo, unit_slots: int) -> tuple[Cho
     if all(label == NO_CHORD for label in labels):
         raise ProcessingError(_NO_CHORD_MESSAGE)
     return labels
+
+
+def detect_key(labels: Sequence[ChordLabel]) -> MusicKey:
+    """Key whose Krumhansl-Kessler profile best matches the chord histogram (C12)."""
+    hist = np.zeros(12, dtype=np.float64)
+    for label in labels:
+        if label.root is None:
+            continue
+        third = 3 if label.minor else 4
+        for interval in (0, third, 7):
+            hist[(label.root + interval) % 12] += 1.0
+        hist[label.root] += 0.5
+    if not hist.any() or np.ptp(hist) == 0:
+        return MusicKey(0, False)
+    best = MusicKey(0, False)
+    best_r = -2.0
+    # Order major before minor, low tonic first: strict ">" keeps the first on ties.
+    for minor, profile in ((False, _KK_MAJOR), (True, _KK_MINOR)):
+        for tonic in range(12):
+            rotated = np.roll(np.asarray(profile), tonic)
+            r = float(np.corrcoef(hist, rotated)[0, 1])
+            if r > best_r + 1e-12:
+                best, best_r = MusicKey(tonic, minor), r
+    return best

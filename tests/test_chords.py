@@ -7,13 +7,22 @@ import pytest
 
 from lamnhac.chords import (
     chroma_per_unit,
+    detect_key,
     label_probabilities,
     recognize,
     smooth,
     unit_boundaries,
 )
 from lamnhac.errors import ProcessingError
-from lamnhac.models import NO_CHORD, SAMPLE_RATE, AudioClip, ChordLabel, RhythmInfo, TimeSignature
+from lamnhac.models import (
+    NO_CHORD,
+    SAMPLE_RATE,
+    AudioClip,
+    ChordLabel,
+    MusicKey,
+    RhythmInfo,
+    TimeSignature,
+)
 
 C = ChordLabel(0, False)
 G = ChordLabel(7, False)
@@ -127,3 +136,23 @@ def test_chroma_per_unit_columns_when_last_boundary_near_end() -> None:
     assert chroma.shape == (12, 5)
     assert silent.shape == (5,)
     assert not silent[:4].any()
+
+
+DM = ChordLabel(2, True)
+E = ChordLabel(4, False)
+D = ChordLabel(2, False)
+EM = ChordLabel(4, True)
+
+
+@pytest.mark.parametrize(
+    ("labels", "expected"),
+    [
+        ([C, G, AM, F] * 4, MusicKey(0, False)),
+        ([AM, DM, E, AM] * 4, MusicKey(9, True)),
+        ([G, D, EM, C] * 4, MusicKey(7, False)),
+        ([NO_CHORD] * 4, MusicKey(0, False)),
+        ([], MusicKey(0, False)),
+    ],
+)
+def test_detect_key(labels: list[ChordLabel], expected: MusicKey) -> None:
+    assert detect_key(labels) == expected

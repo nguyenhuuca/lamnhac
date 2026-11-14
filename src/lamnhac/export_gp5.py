@@ -11,6 +11,7 @@ from guitarpro import models as gp
 from lamnhac.durations import split
 from lamnhac.errors import OutputError
 from lamnhac.models import ChordDiagram, MusicKey, TabScore, TabSlot
+from lamnhac.names import key_fifths, key_symbol
 
 _TITLE_MAX = 64
 _TICKS_PER_SLOT = 240  # PyGuitarPro: quarter = 960 ticks, slot = sixteenth
@@ -26,28 +27,6 @@ _DURATION = {
     2: (8, False),
     1: (16, False),
 }
-# major tonic pitch class -> sharps (+) / flats (-); pc 6 is F# (6 sharps)
-_MAJOR_FIFTHS = (0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5)
-_NAMES_FLAT = ("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
-_NAMES_SHARP = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
-_FLAT_MAJOR = frozenset({5, 10, 3, 8, 1})  # F Bb Eb Ab Db (Gb major is written F#)
-_FLAT_MINOR = frozenset({2, 7, 0, 5, 10, 3})  # D G C F Bb Eb
-
-
-def key_symbol(key: MusicKey) -> str:
-    """ASCII key symbol such as ``Am``, ``Bb``, ``F#m``."""
-    flat = key.tonic in (_FLAT_MINOR if key.minor else _FLAT_MAJOR)
-    names = _NAMES_FLAT if flat else _NAMES_SHARP
-    return names[key.tonic] + ("m" if key.minor else "")
-
-
-def key_fifths(key: MusicKey) -> int:
-    """Signed number of sharps (+) or flats (-) of the key signature, -7..7."""
-    if not key.minor:
-        return _MAJOR_FIFTHS[key.tonic]
-    if key.tonic == 3:  # Eb minor: 6 flats (relative major Gb)
-        return -6
-    return _MAJOR_FIFTHS[(key.tonic + 3) % 12]
 
 
 def _key_signature(key: MusicKey) -> gp.KeySignature:
