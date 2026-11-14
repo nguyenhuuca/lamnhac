@@ -1,6 +1,6 @@
 # PRD: Vòng hợp âm từ bài hát → Guitar Pro (lamnhac chords)
 
-**Status:** Draft · **Owner:** project owner · **Date:** 2026-11-14 · **PR-FAQ:** n/a (Medium size)
+**Status:** Approved · **Owner:** project owner · **Date:** 2026-11-14 · **PR-FAQ:** n/a (Medium size)
 
 ## Problem
 
@@ -72,11 +72,12 @@ Bằng chứng: nhu cầu của owner, nêu ngày 2026-11-14 sau khi dùng `conv
 
 ## Open Questions
 
-- Owner chuẩn bị 3–5 bài cho bộ test: MP3 cùng file `<bài>.chords.txt` chép hợp âm theo thứ tự. Định dạng đề xuất: mỗi dòng một đoạn, hợp âm cách nhau bằng dấu cách. Có cần đánh dấu ô nhịp không? (owner)
-- Gộp vào `convert` (`--chords`) hay để lệnh riêng như R1? Đề xuất lệnh riêng, vì đầu vào khác hẳn: bài đầy đủ chứ không phải guitar solo. (owner)
-- Mục tiêu G1 0.70 và G4 60 s là giả định. Chỉnh lại sau lần đo đầu. (owner + dev)
+- Owner chuẩn bị 3–5 bài cho bộ test: MP3 cùng file `<bài>.chords.txt` chép hợp âm theo thứ tự. **Đã chốt 2026-11-14:** mỗi dòng một đoạn, hợp âm cách nhau bằng dấu cách, không cần đánh dấu ô nhịp. (owner)
+- ~~Gộp vào `convert` hay để lệnh riêng?~~ **Đã chốt 2026-11-14:** lệnh riêng `lamnhac chords` (R1).
+- Mục tiêu G1 0.70 và G4 60 s là giả định, owner đồng ý dùng tạm (2026-11-14). Chỉnh lại sau lần đo đầu. (owner + dev)
 - Cách nhận hợp âm: mẫu chroma kèm làm mượt bằng HMM/Viterbi dùng librosa, hay một model học sâu? Quyết định ở bước spec, kèm ADR nếu thêm thư viện. (dev)
 
 ## Changelog
 
+- 2026-11-14: Owner duyệt PRD; các câu hỏi mở về định dạng đáp án, lệnh riêng và mục tiêu tạm đã chốt theo đề xuất.
 - 2026-11-14: Draft từ `/scope`. Owner chọn: chỉ trưởng và thứ; mỗi phách gảy một lần, có tên và sơ đồ hợp âm; chưa làm giai điệu; đo bằng bài thật cộng hợp âm trên lời.
