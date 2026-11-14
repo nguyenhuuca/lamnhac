@@ -221,6 +221,46 @@ Mỗi file được ghi ra `<tên>.tmp-<pid>.<đuôi>` trước, rồi `os.repla
 
 ---
 
+## 7. Vòng hợp âm (`lamnhac chords`)
+
+Lệnh `chords` không chép từng nốt. Nó nghe **màu hoà âm** của từng phách rồi chọn hợp âm hợp nhất. Lệnh này không dùng basic-pitch, nên không nạp TensorFlow và chạy nhanh hơn `convert`.
+
+### 7.1 Nhịp
+
+Dùng lại toàn bộ phần nhịp của `convert` (mục 3): beat tracking, căn phách B7a và B7b, `--pickup`. Điểm khác duy nhất: thay cho nốt của basic-pitch, tool dùng các **onset** (thời điểm có tiếng gảy hoặc tiếng trống) do librosa tìm ra.
+
+**Đơn vị gảy** dài một phách theo mẫu số của nhịp: 4/4 là nốt đen, 6/8 là nốt móc đơn. Mỗi đơn vị có đúng một hợp âm.
+
+### 7.2 Chroma: 12 ngăn cho 12 nốt
+
+1. **Bỏ bớt trống:** tách phần hoà âm (harmonic) khỏi phần gõ (percussive) bằng HPSS.
+2. **Bù lệch tuning:** ước lượng xem bản thu lệch khỏi A440 bao nhiêu, rồi bù vào.
+3. **Phổ CQT:** chia tần số theo nửa cung từ C2 tới B7, mỗi nửa cung 3 ngăn.
+4. **Gộp quãng tám:** cộng mọi quãng tám về 12 ngăn C, C#, …, B. Đây là **chroma**. Dải trầm C2–B3, nơi có bass, được tính riêng rồi cộng thêm với trọng số 0.5, vì nốt bass thường là nốt gốc của hợp âm, còn giọng hát nằm ở dải cao.
+5. **Theo đơn vị gảy:** lấy trung vị chroma trong từng đơn vị gảy.
+
+### 7.3 So mẫu và làm mượt
+
+- **So mẫu.** Mỗi hợp âm có một mẫu 12 ngăn: trưởng là {gốc, +4, +7}, thứ là {gốc, +3, +7}. Chroma của mỗi đơn vị được so với 24 mẫu bằng cosine. Nhãn **N** (không hợp âm) có điểm cố định 0.55; đơn vị gần như im lặng thì chắc chắn là N.
+- **Làm mượt bằng Viterbi.** Nếu chỉ lấy mẫu khớp nhất cho từng phách, hợp âm sẽ nhảy lung tung vì giọng hát và nốt lướt. Viterbi chọn **cả chuỗi** hợp lý nhất, trong đó việc giữ nguyên hợp âm được thưởng (xác suất ở lại 0.85). Một phách bị nhiễu giữa các phách C sẽ bị gộp về C. Một phách G rõ ràng thì vẫn được giữ, vì đó có thể là hợp âm thật.
+
+### 7.4 Giọng và tên hợp âm
+
+- **Giọng.** Tool đếm xem mỗi nốt xuất hiện trong bao nhiêu phách (nốt gốc được cộng thêm), rồi so với 24 **profile giọng Krumhansl–Kessler**, tức mức độ "quan trọng" của từng bậc trong một giọng mà người nghe cảm nhận. Giọng có tương quan cao nhất được chọn.
+- **Thăng hay giáng.** Giọng có dấu giáng (Fa, Si giáng, Rê thứ…) thì viết Bb, Eb. Giọng có dấu thăng thì viết F#, C#. Ở Đô trưởng và La thứ, các hợp âm hay gặp như Bb, Eb, Ab viết bằng dấu giáng.
+
+### 7.5 Ô nhịp theo chỗ đổi hợp âm
+
+Trong pop và ballad, hợp âm gần như luôn đổi ở **phách 1**. Khi không có `--pickup`, tool thử mọi vị trí bắt đầu ô nhịp và chọn vị trí có nhiều lần đổi hợp âm trùng phách 1 nhất.
+- Kết quả chỉ được dùng khi vị trí tốt nhất hơn vị trí thứ hai ít nhất 20% và có ít nhất 4 lần đổi. Nếu không, tool giữ cách đoán phách mạnh của mục 3.3.
+- Các ô toàn N ở đầu bài (intro chỉ có trống hoặc lời nói) bị bỏ.
+
+### 7.6 Thế bấm
+
+- 8 hợp âm có **thế mở** quen thuộc: C, D, E, G, A, Am, Dm, Em.
+- Các hợp âm còn lại dùng **thế chặn**: kiểu E (nốt gốc trên dây 6) hoặc kiểu A (nốt gốc trên dây 5), chọn thế ở ngăn thấp hơn. Ví dụ F là kiểu E ở ngăn 1, Bm là kiểu A ở ngăn 2.
+- Với `--capo N`, tên và thế bấm lấy từ hợp âm hạ N nửa cung.
+
 ## Hiệu năng (đo trên file mẫu)
 
 | Bước | Thời gian |
@@ -236,3 +276,5 @@ Mỗi file được ghi ra `<tên>.tmp-<pid>.<đuôi>` trước, rồi `os.repla
 - R. Bittner et al., *A Lightweight Instrument-Agnostic Model for Polyphonic Note Transcription and Multipitch Estimation*, ICASSP 2022. Đây là bài báo về basic-pitch.
 - D. P. W. Ellis, *Beat Tracking by Dynamic Programming*, Journal of New Music Research, 2007. Đây là thuật toán của `librosa.beat.beat_track`.
 - C. Raffel et al., *mir_eval: A Transparent Implementation of Common MIR Metrics*, ISMIR 2014. Thư viện này được dùng để đo Note F1.
+- C. L. Krumhansl, *Cognitive Foundations of Musical Pitch*, Oxford University Press, 1990. Đây là nguồn của các profile giọng Krumhansl–Kessler.
+- T. Fujishima, *Realtime Chord Recognition of Musical Sound: a System Using Common Lisp Music*, ICMC 1999. Đây là bài báo đầu tiên dùng chroma (PCP) và mẫu hợp âm.

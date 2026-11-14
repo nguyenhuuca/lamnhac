@@ -110,6 +110,49 @@ Hữu ích khi gọi tool từ script khác. stdout chỉ in đường dẫn cá
 | 5 | Không ghi được đầu ra: file đã tồn tại mà không có `--force`, hoặc ghi một định dạng bị lỗi |
 | 1 | Lỗi không lường trước. Chạy lại với `-v` để xem chi tiết |
 
+## Vòng hợp âm từ bài hát (`lamnhac chords`)
+
+Với bài hát đầy đủ, có giọng hát và nhạc đệm, lệnh `chords` cho ra **vòng hợp âm** để bạn tập đệm theo:
+
+```powershell
+uv run lamnhac chords "D:
+hacai.mp3" --format gp5,txt
+# -> D:
+hacai.chords.gp5 và D:
+hacai.chords.txt
+```
+
+Màn hình in ra giọng và bảng hợp âm theo ô nhịp:
+
+```
+xong: 42 lần đổi hợp âm, giọng La thứ (Am), tempo 96 BPM (detected), 0 cảnh báo, 12.3s
+# bai
+# giọng: La thứ (Am) · tempo: 96 BPM · nhịp: 4/4
+
+| Am | F | C | G |
+| Am | F | C G | E |
+```
+
+File `.chords.gp5` có một track guitar:
+- mỗi phách gảy một lần hợp âm;
+- tên hợp âm và sơ đồ bấm hiện ở mỗi chỗ đổi hợp âm;
+- giọng ghi ở tiêu đề phụ ("Key: Am") và ở khoá nhạc.
+
+Phần này dùng chung các tuỳ chọn `-o`, `--tempo`, `--time`, `--pickup`, `--force`, `-v` với `convert`. Ngoài ra có thêm:
+
+| Tuỳ chọn | Mặc định | Ý nghĩa |
+|----------|----------|---------|
+| `--format LIST` | `gp5` | `gp5`, `txt` hoặc `gp5,txt` |
+| `--capo N` | 0 | Kẹp capo ở ngăn N (0–11). Tên hợp âm và thế bấm tính cho người kẹp capo, ví dụ bài Đô trưởng với `--capo 3` thì C hiện thành A |
+
+**Giới hạn:**
+- Chỉ nhận hợp âm **trưởng và thứ**. Hợp âm 7, sus, dim được ghi thành trưởng hoặc thứ gần nhất.
+- Kết quả là **một** cách nghe hợp âm; nên nghe lại và sửa trong Guitar Pro.
+- Giọng hát to hoặc nhạc điện tử nhiều hiệu ứng làm kết quả kém hơn.
+- Tool chỉ báo một giọng cho cả bài, kể cả khi bài đổi giọng giữa chừng.
+
+Chi tiết thuật toán: [docs/algorithms.md](algorithms.md#7-vong-hop-am-lamnhac-chords).
+
 ## Giới hạn hiện tại
 
 - Chỉ hỗ trợ **một cây guitar**. Nhạc có cả ban nhạc sẽ cho kết quả kém.
@@ -134,7 +177,17 @@ Thư mục này nằm trong `.gitignore`, nên file của bạn không bị đư
 uv run pytest -m eval -s
 ```
 
-Mỗi bài in ra Note F1 ở cả ba mức `--sensitivity`. Một nốt tính là đúng khi đúng cao độ và bắt đầu lệch không quá 50 ms so với tab. F1 = 1 là khớp hoàn toàn, mục tiêu là ≥ 0.70. Kết quả gần nhất nằm trong [báo cáo eval](reports/eval-2026-11-14-g1.md).
+Với lệnh `chords`, mỗi cặp là `<bài>.mp3` + `<bài>.hopam.txt`, tức hợp âm bạn chép theo thứ tự, ví dụ:
+
+```
+# key: Am
+Am F C G
+Am F C E
+```
+
+Có thể thêm các dòng `# tempo: 96`, `# time: 3/4`, `# pickup: 1`. Tên file `.hopam.txt` khác `.chords.txt` mà tool ghi ra, nên đáp án không bị ghi đè. Eval in độ khớp chuỗi hợp âm, kể cả sau khi dịch giọng, cùng giọng đoán được.
+
+Với `convert`, mỗi bài in ra Note F1 ở cả ba mức `--sensitivity`. Một nốt tính là đúng khi đúng cao độ và bắt đầu lệch không quá 50 ms so với tab. F1 = 1 là khớp hoàn toàn, mục tiêu là ≥ 0.70. Kết quả gần nhất nằm trong [báo cáo eval](reports/eval-2026-11-14-g1.md).
 
 ## Phát triển
 
@@ -155,7 +208,7 @@ Bố cục mã nguồn. Mỗi bước là một module, chỉ trao đổi dữ l
 ```
 src/lamnhac/
   cli.py              tham số dòng lệnh, mã thoát
-  pipeline.py         chạy 6 bước theo thứ tự
+  pipeline.py         convert (6 bước) và chords (4 bước)
   models.py           dataclass dùng chung
   errors.py           các lỗi và mã thoát tương ứng
   audio.py            [1] kiểm tra file và decode MP3
@@ -165,6 +218,10 @@ src/lamnhac/
   durations.py        tách trường độ (dùng khi xuất file)
   export_gp5.py       [6] ghi .gp5
   export_musicxml.py  [6] ghi .musicxml
+  chords.py           chords: chroma, Viterbi, giọng, ô nhịp, dựng tab hợp âm
+  chord_shapes.py     thế bấm 24 hợp âm
+  names.py            tên hợp âm, tên giọng, thăng/giáng
+  export_chords_txt.py  ghi .chords.txt
 tests/                pytest; tests/fixtures/ chứa MP3 tổng hợp kèm đáp án .json
 docs/                 PRD, ADR, spec, sequence, plan, báo cáo
 ```
