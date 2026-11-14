@@ -14,6 +14,7 @@ __pycache__/
 .claude/worktrees/
 .idea/
 # owner recordings: keep out of git
-tests/fixtures/testgod.mp3
+tests/fixtures/testgod.*
+tests/fixtures/test2.*
 site/
 tests/fixtures/real/

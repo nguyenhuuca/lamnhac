@@ -194,8 +194,10 @@ def main(argv: list[str] | None = None) -> int:
     if isinstance(opts, ChordsOptions):
         _report(chords_result.outputs, chords_result.warnings, chords_result.errors)
         chart = chords_result.chart
+        capo_note = f" (thế bấm theo capo {chart.capo})" if chart.capo else ""
         print(
-            f"xong: {chords_result.change_count} lần đổi hợp âm, giọng {key_name(chart.key)}, "
+            f"xong: {chords_result.change_count} lần đổi hợp âm, "
+            f"giọng {key_name(chart.key)}{capo_note}, "
             f"tempo {chart.rhythm.tempo_bpm:.0f} BPM ({chart.rhythm.tempo_source}), "
             f"{len(chords_result.warnings)} cảnh báo, {time.perf_counter() - started:.1f}s",
             file=sys.stderr,

@@ -249,3 +249,38 @@ def test_bar_start_skips_whole_bars_of_leading_no_chord() -> None:
     bar1, dropped = bar_start(labels, rhythm, 4, pickup_given=True)
     assert bar1 == 32  # the bar containing unit 10 (slot 40) starts at slot 32
     assert dropped == 8
+
+
+def test_bar_start_backs_up_for_pickup_before_downbeat() -> None:
+    labels = [C] * 3 + [G] * 2
+    bar1, dropped = bar_start(labels, _rhythm_ts(4, 4, 8), 4, True)
+    assert bar1 == -8
+    assert dropped == 0
+
+
+def test_build_tab_negative_bar1_slots_are_contiguous_and_whole_bars() -> None:
+    # Regression: the tail rest was placed by summed length, overlapping real slots.
+    labels = [C] * 3 + [G] * 2
+    tab, _, _ = build_tab(labels, MusicKey(0, False), 4, -8, _rhythm_ts(4, 4, 8), 0, "t")
+    assert tab.slots[0].start == 8
+    for prev, cur in zip(tab.slots, tab.slots[1:], strict=False):
+        assert cur.start == prev.start + prev.length
+    end = tab.slots[-1].start + tab.slots[-1].length
+    assert end % 16 == 0
+
+
+def test_smooth_short_units_hold_longer() -> None:
+    # One unit 40000x more G than C inside C: the switch costs ~18500x at P_STAY 0.85
+    # and ~76000x at 0.92, so long units switch and short (6/8) units keep C.
+    prob = np.full((25, 9), 1e-9)
+    prob[0, :] = 0.9
+    prob[7, 4], prob[0, 4] = 0.9, 0.9 / 40000
+    prob /= prob.sum(axis=0, keepdims=True)
+    assert smooth(prob, 4)[4] == 7
+    assert smooth(prob, 2) == [0] * 9
+
+
+def test_recognize_zero_units_raises() -> None:
+    rhythm = RhythmInfo(120.0, (5.0, 5.5), 0, TimeSignature(4, 4), "detected")
+    with pytest.raises(ProcessingError):
+        recognize(_clip(np.zeros(22050, dtype=np.float32)), rhythm, 4)

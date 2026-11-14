@@ -374,3 +374,21 @@ def test_chords_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert opts.tempo is None
     assert opts.force is False
     assert opts.out_dir == SCALE.resolve().parent
+
+
+@pytest.mark.parametrize(("capo", "note"), [("0", None), ("3", "(thế bấm theo capo 3)")])
+def test_chords_summary_capo_note(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    capo: str,
+    note: str | None,
+) -> None:
+    _stub_recognize(monkeypatch)
+    argv = ["chords", str(SCALE), "-o", str(tmp_path), "--tempo", "96", "--capo", capo]
+    assert main(argv) == 0
+    summary = next(ln for ln in capsys.readouterr().err.splitlines() if ln.startswith("xong:"))
+    if note is None:
+        assert "capo" not in summary
+    else:
+        assert note in summary

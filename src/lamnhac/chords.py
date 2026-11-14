@@ -298,7 +298,9 @@ def build_tab(
             diagrams[start] = ChordDiagram(
                 chord_name(label, key, capo), label, chord_shape, chord_sharp(label, key, capo)
             )
-    total = sum(s.length for s in slots)
-    if total % bar_slots:
-        slots.append(TabSlot(total, bar_slots - total % bar_slots))
+    # Pad from the end position, not the summed length: with bar1_slot < 0 the first
+    # slot starts after 0.
+    end = slots[-1].start + slots[-1].length if slots else 0
+    if end % bar_slots:
+        slots.append(TabSlot(end, bar_slots - end % bar_slots))
     return TabScore(rhythm, STANDARD_TUNING, tuple(slots), title), diagrams, change_count
