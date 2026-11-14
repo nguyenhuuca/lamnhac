@@ -7,9 +7,10 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import guitarpro
 import pytest
 
-from lamnhac import audio, chords, export_gp5, pipeline, transcribe
+from lamnhac import audio, chords, cli, export_gp5, pipeline, transcribe
 from lamnhac.errors import OutputError
 from lamnhac.models import (
     NO_CHORD,
@@ -242,3 +243,29 @@ def test_chords_path_never_imports_transcription_stack() -> None:
     )
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
     assert proc.returncode == 0, proc.stderr
+
+
+def test_chords_cli_recognizes_cgamf_fixture(tmp_path: Path) -> None:
+    song = FIXTURES / "chords_cgamf.mp3"
+    argv = ["chords", str(song), "-o", str(tmp_path), "--tempo", "100", "--format", "gp5,txt"]
+    assert cli.main(argv) == 0
+
+    text = (tmp_path / "chords_cgamf.chords.txt").read_text(encoding="utf-8")
+    bars = [ln for ln in text.splitlines() if ln.startswith("|")]
+    tokens = [t for t in " ".join(bars).replace("|", " ").split() if t != "%"]
+    collapsed = [t for i, t in enumerate(tokens) if i == 0 or t != tokens[i - 1]]
+    assert collapsed == ["C", "G", "Am", "F"]
+    assert bars[0].lstrip("| ").startswith("C")
+
+    parsed = guitarpro.parse(str(tmp_path / "chords_cgamf.chords.gp5"))
+    assert parsed.subtitle == "Key: C"
+    names = [
+        beat.effect.chord.name
+        for track in parsed.tracks
+        for measure in track.measures
+        for voice in measure.voices
+        for beat in voice.beats
+        if beat.effect.chord is not None
+    ]
+    assert names[0] == "C"
+    assert set(names) == {"C", "G", "Am", "F"}

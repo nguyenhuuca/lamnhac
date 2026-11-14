@@ -4,7 +4,8 @@ Run from the repository root:
 
     uv run python tests/fixtures/make_fixtures.py
 
-Writes scale_c, riff_97bpm and power_chord (.mp3 + .json) and stereo_short.mp3 next to this file.
+Writes scale_c, riff_97bpm, power_chord and chords_cgamf (.mp3 + .json) and stereo_short.mp3
+next to this file.
 """
 
 import json
@@ -134,12 +135,65 @@ def make_power_chord(rng: np.random.Generator) -> None:
     dump(OUT / "power_chord.json", {"notes": notes_json(notes)})
 
 
+def make_chords_cgamf(rng: np.random.Generator) -> None:
+    """C-G-Am-F, one chord per 4/4 bar at 100 BPM: strummed triads, bass, kick and a sine melody."""
+    bpm = 100
+    beat = 60.0 / bpm
+    bars = 4
+    lead = 0.15  # the beat tracker needs an onset after t=0 to keep the first beat
+    total_s = lead + bars * 4 * beat
+    triads = {"C": (0, 4, 7), "G": (7, 11, 14), "Am": (9, 12, 16), "F": (5, 9, 12)}
+    roots = {"C": 0, "G": 7, "Am": 9, "F": 5}
+    # melody per bar: chord tones plus one passing non-chord tone (octave 5, C5 = 72)
+    melody = {
+        "C": (76, 79, 74, 72),
+        "G": (74, 79, 77, 71),
+        "Am": (76, 72, 74, 69),
+        "F": (72, 77, 76, 69),
+    }
+    notes: list[Note] = []
+    for bar, name in enumerate(["C", "G", "Am", "F"]):
+        for b in range(4):
+            on = lead + (bar * 4 + b) * beat
+            for iv in triads[name]:
+                notes.append((on, on + beat * 0.95, 60 + iv, 1.0))
+            notes.append((on, on + beat * 0.95, 48 + roots[name], 0.4))
+            if b % 2 == 0:
+                notes.append((on, on + beat * 1.9, 36 + roots[name], 0.6))
+    mix = render(notes, total_s, rng).astype(np.float64)
+    t_kick = np.arange(int(0.08 * SR)) / SR
+    kick = 0.5 * np.sin(2 * np.pi * 60 * t_kick) * np.exp(-t_kick / 0.03)
+    for i in range(bars * 4):
+        start = int((lead + i * beat) * SR)
+        mix[start : start + kick.size] += kick
+    for bar, name in enumerate(["C", "G", "Am", "F"]):
+        for b, midi in enumerate(melody[name]):
+            start = int((lead + (bar * 4 + b) * beat) * SR)
+            n = int(beat * 0.9 * SR)
+            t = np.arange(n) / SR
+            tone = 0.08 * np.sin(2 * np.pi * 440.0 * 2 ** ((midi - 69) / 12) * t)
+            tone *= np.minimum(1.0, np.minimum(t / 0.01, (n / SR - t) / 0.02))
+            mix[start : start + n] += tone
+    mix = mix / np.max(np.abs(mix)) * 0.8
+    write_mp3(OUT / "chords_cgamf.mp3", mix.astype(np.float32))
+    dump(
+        OUT / "chords_cgamf.json",
+        {
+            "tempo_bpm": bpm,
+            "time_signature": [4, 4],
+            "chords": ["C", "G", "Am", "F"],
+            "key": "C",
+        },
+    )
+
+
 def main() -> None:
     rng = np.random.default_rng(SEED)
     make_scale(rng)
     make_riff(rng)
     make_stereo(rng)
     make_power_chord(rng)  # last: keeps the rng stream of the fixtures above unchanged
+    make_chords_cgamf(rng)
 
 
 if __name__ == "__main__":

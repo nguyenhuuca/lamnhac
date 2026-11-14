@@ -1,0 +1,14 @@
+{
+  "tempo_bpm": 100,
+  "time_signature": [
+    4,
+    4
+  ],
+  "chords": [
+    "C",
+    "G",
+    "Am",
+    "F"
+  ],
+  "key": "C"
+}
